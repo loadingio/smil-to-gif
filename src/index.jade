@@ -1,0 +1,16 @@
+doctype html
+html
+  head
+    script(src="gif.js")
+    script(src="index.js")
+  body
+    svg#svg(width="200",height="200",viewBox="0 0 100 100",style="width:200px;height:200px")
+      rect(x="0",y="0",width="100",height="100",fill="#00f")
+      path(stroke="red",stroke-width="1",d="M0 0 L0 0")
+        animate(attributeName="d",values="M0 0L0 10A1 2 3 0 1 4 5;M0 0 L10 10A1 2 3 0 1 4 5",
+        keyTimes="0;1",dur="1s",repeatCount="indefinite")
+      circle(cx="50",cy="50",r="10")
+        animateTransform(attributeName="transform",type="rotate",values="45 10 10;45 10 10;45 10 10",
+        keyTimes="0;0.5;1",dur="1s",repeatCount="indefinite")
+        animate(attributeName="r",values="5;10;5",keyTimes="0;0.5;1",dur="1s",repeatCount="indefinite")
+        animate(attributeName="fill",values="#f00;#0f0",keyTimes="0;1",dur="1s",repeatCount="indefinite")
