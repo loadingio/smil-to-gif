@@ -107,7 +107,7 @@
     return Promise.all(_fetchImages(node, hash));
   };
   traverse = function(node, option){
-    var style, animatedProperties, attrs, subtags, i$, to$, i, child, dur, path, length, ptr, name, value, ref$, len$, v, k, ret;
+    var style, animatedProperties, attrs, subtags, i$, to$, i, child, dur, begin, path, length, ptr, name, value, ref$, len$, v, k, ret;
     option == null && (option = {});
     if (/^#text/.exec(node.nodeName)) {
       return node.textContent;
@@ -127,9 +127,10 @@
       child = node.childNodes[i];
       if (/^animateMotion/.exec(child.nodeName)) {
         dur = child.getSimpleDuration();
-        path = document.querySelector(child.childNodes[0].getAttribute("href"));
+        begin = +child.getAttribute("begin").replace("s", "");
+        path = document.querySelector(child.querySelector("mpath").getAttributeNS("http://www.w3.org/1999/xlink", "href"));
         length = path.getTotalLength();
-        ptr = path.getPointAtLength(length * (child.getCurrentTime() % dur) / dur);
+        ptr = path.getPointAtLength(length * ((child.getCurrentTime() - begin) % dur) / dur);
         animatedProperties["transform"] = "translate(" + ptr.x + " " + ptr.y + ")";
       } else if (/^animate/.exec(child.nodeName)) {
         name = child.getAttribute('attributeName');
