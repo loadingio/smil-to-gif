@@ -88,7 +88,7 @@
       return [];
     }
     href = node.getAttribute('xlink:href');
-    if (href) {
+    if (href && !/^#/.exec(href)) {
       width = node.getAttribute('width');
       height = node.getAttribute('height');
       promises.push(fetchImage(href, width, height).then(function(it){
@@ -107,7 +107,7 @@
     return Promise.all(_fetchImages(node, hash));
   };
   traverse = function(node, option){
-    var style, animatedProperties, attrs, subtags, i$, to$, i, child, name, value, ref$, len$, v, k, ret;
+    var style, animatedProperties, attrs, subtags, i$, to$, i, child, dur, path, length, ptr, name, value, ref$, len$, v, k, ret;
     option == null && (option = {});
     if (/^#text/.exec(node.nodeName)) {
       return node.textContent;
@@ -125,7 +125,13 @@
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
       child = node.childNodes[i];
-      if (/^animate/.exec(child.nodeName)) {
+      if (/^animateMotion/.exec(child.nodeName)) {
+        dur = child.getSimpleDuration();
+        path = document.querySelector(child.childNodes[0].getAttribute("href"));
+        length = path.getTotalLength();
+        ptr = path.getPointAtLength(length * (child.getCurrentTime() % dur) / dur);
+        animatedProperties["transform"] = "translate(" + ptr.x + " " + ptr.y + ")";
+      } else if (/^animate/.exec(child.nodeName)) {
         name = child.getAttribute('attributeName');
         value = node[name] || style.getPropertyValue(name);
         if (name === 'd') {
@@ -163,22 +169,20 @@
   smiltool = module.smiltool = {};
   smiltool.smilToSvg = smilToSvg = function(root, delay){
     return new Promise(function(res, rej){
+      var hash;
       root.pauseAnimations();
       if (delay != null) {
         root.setCurrentTime(delay);
       }
-      return setTimeout(function(){
-        var hash;
-        hash = {};
-        return fetchImages(root, hash).then(function(){
-          var ret;
-          ret = traverse(root, {
-            hrefs: hash
-          });
-          root.unpauseAnimations();
-          return res("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + ret);
+      hash = {};
+      return fetchImages(root, hash).then(function(){
+        var ret;
+        ret = traverse(root, {
+          hrefs: hash
         });
-      }, 0);
+        root.unpauseAnimations();
+        return res("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + ret);
+      });
     });
   };
   smiltool.svgToDataurl = svgToDataurl = function(svg){
@@ -394,13 +398,13 @@
 })(typeof module != 'undefined' && module !== null ? module.exports || (module.exports = {}) : window);
 /*
 <- $ document .ready
-option = {width: 200, height: 200}
+option = {width: 200, height: 200, duration: 2}
 gifoption = do
   worker: 2,
   quality: 10,
   workerScript: \gif.worker.js,
   transparent: 0x0000ff
-smiltool.to-gif( document.getElementById(\svg), option, gifoption )
+smiltool.smil-to-gif( document.getElementById(\svg), option, gifoption )
   .then -> document.body.appendChild it.gif
 */
 function import$(obj, src){

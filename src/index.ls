@@ -50,7 +50,7 @@
     promises = []
     if /^#/.exec(node.nodeName) => return []
     href = node.getAttribute \xlink:href
-    if href =>
+    if href and !/^#/.exec(href) =>
       width = node.getAttribute \width
       height = node.getAttribute \height
       promises.push( fetch-image(href, width, height).then -> hash[href] = it )
