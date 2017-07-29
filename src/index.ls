@@ -73,14 +73,19 @@
       animatedProperties["xmlns:xlink"] = "http://www.w3.org/1999/xlink"
     for i from 0 til node.childNodes.length =>
       child = node.childNodes[i]
-      if /^animate/.exec(child.nodeName) =>
+      if /^animateMotion/.exec(child.nodeName) =>
+        dur = child.getSimpleDuration!
+        path = document.querySelector(child.childNodes[0].getAttribute("href"))
+        length = path.getTotalLength!
+        ptr = path.getPointAtLength(length * (child.getCurrentTime() % dur) / dur)
+        animatedProperties["transform"] = "translate(#{ptr.x} #{ptr.y})"
+      else if /^animate/.exec(child.nodeName) =>
         name = child.getAttribute \attributeName
         value = node[name] or style.getPropertyValue(name)
         if name == \d => value = (node.animatedPathSegList or node.getAttribute(\d))
         animatedProperties[name] = anim-to-string(value)
       else subtags.push traverse(child, option)
     for v in node.attributes =>
-      #if /xlink/.exec v.name => console.log v.name, "[#{v.value}]", option.hrefs[v.value.trim!], option.hrefs
       if animatedProperties[v.name]? =>
         attrs.push [v.name, animatedProperties[v.name]]
         delete animatedProperties[v.name]
@@ -235,12 +240,12 @@
 # sample usage
 /*
 <- $ document .ready
-option = {width: 200, height: 200}
+option = {width: 200, height: 200, duration: 2}
 gifoption = do
   worker: 2,
   quality: 10,
   workerScript: \gif.worker.js,
   transparent: 0x0000ff
-smiltool.to-gif( document.getElementById(\svg), option, gifoption )
+smiltool.smil-to-gif( document.getElementById(\svg), option, gifoption )
   .then -> document.body.appendChild it.gif
 */

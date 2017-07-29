@@ -1,10 +1,12 @@
 doctype html
 html
   head
+    script(src="/assets/jquery/1.10.2/jquery.min.js")
     script(src="gif.js")
     script(src="index.js")
   body
-    svg#svg(width="200",height="200",viewBox="0 0 100 100",style="width:200px;height:200px")
+    svg#svg(xmlns:xlink="http://www.w3.org/1999/xlink",
+    width="200",height="200",viewBox="0 0 100 100",style="width:200px;height:200px")
       rect(x="0",y="0",width="100",height="100",fill="#00f")
       path(stroke="red",stroke-width="1",d="M0 0 L0 0")
         animate(attributeName="d",values="M0 0L0 10A1 2 3 0 1 4 5;M0 0 L10 10A1 2 3 0 1 4 5",
@@ -14,3 +16,7 @@ html
         keyTimes="0;0.5;1",dur="1s",repeatCount="indefinite")
         animate(attributeName="r",values="5;10;5",keyTimes="0;0.5;1",dur="1s",repeatCount="indefinite")
         animate(attributeName="fill",values="#f00;#0f0",keyTimes="0;1",dur="1s",repeatCount="indefinite")
+      path#path(d="M0 0A30 30 0 0 1 30 30A30 30 0 0 0 60 60",fill="none",stroke="#000")
+      circle(cx="0",cy="0",r="10",fill="#0f0")
+        animateMotion(dur="2s",repeatCount="indefinite")
+          mpath(href="#path")
