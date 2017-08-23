@@ -61,13 +61,42 @@
 
   fetch-images = (node, hash = {}) -> Promise.all _fetch-images(node, hash)
 
+  freeze-traverse = (node, option = {}, delay = 0) ->
+    if /^#text/.exec(node.nodeName) => return node.textContent
+    else if /^#/.exec(node.nodeName) => return ""
+    style = window.getComputedStyle(node)
+    if !(node._delay?) => node._delay = parseFloat(style["animation-delay"] or 0)
+    if !(node._dur?) => node._dur = parseFloat(style["animation-duration"] or 0)
+    node.style["animation-play-state"] = "paused";
+    node.style["animation-delay"] = "#{(node._delay + -delay * node._dur)}s";
+    for i from 0 til node.childNodes.length =>
+      child = node.childNodes[i]
+      freeze-traverse child, option, delay
+
+  prepare = (node, option = {}, delay) ->
+    # reset animation so we can get precisely the value with delay
+    [p,n] = [node.parentNode, node.nextSibling]
+    p.removeChild node
+    if n => p.insertBefore(node, n) else p.appendChild node
+    freeze-traverse node, option, delay
+    traverse node, option
+
+  dummy = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+  document.body.append(dummy)
+  dummy-style = window.getComputedStyle(dummy)
+
   traverse = (node, option = {}) ->
     if /^#text/.exec(node.nodeName) => return node.textContent
     else if /^#/.exec(node.nodeName) => return ""
+    [attrs,styles,subtags,animatedProperties] = [[],[],[],{}]
     style = getComputedStyle(node)
-    animatedProperties = {}
-    attrs = []
-    subtags = []
+
+    # track styles
+    if option.css-animation or option.with-css =>
+      for k,v of style =>
+        if !(/^\d+$|^cssText$/.exec(k) or dummy-style[k] == v) =>
+          styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
+
     if node.nodeName == \svg =>
       animatedProperties["xmlns"] = "http://www.w3.org/2000/svg"
       animatedProperties["xmlns:xlink"] = "http://www.w3.org/1999/xlink"
@@ -89,6 +118,7 @@
         animatedProperties[name] = anim-to-string(value)
       else subtags.push traverse(child, option)
     for v in node.attributes =>
+      if v.name == \style => continue
       if animatedProperties[v.name]? =>
         attrs.push [v.name, animatedProperties[v.name]]
         delete animatedProperties[v.name]
@@ -97,9 +127,12 @@
       else attrs.push [v.name, v.value]
     for k,v of animatedProperties => attrs.push [k, v]
     ret = [
-      """<#{node.nodeName} #{attrs.map(->"#{it.0}=\"#{it.1}\"").join(" ")}>"""
+      "<#{node.nodeName}"
+      """ #{attrs.map(->"#{it.0}=\"#{it.1}\"").join(" ")}""" if attrs.length
+      """ style="#{styles.map(->"#{it.0}:#{it.1}").join(";")}" """ if styles.length
+      ">"
       subtags.join("\n").trim!
-      """</#{node.nodeName}>"""
+      "</#{node.nodeName}>"
     ].filter(->it).join("")
     return ret
 
@@ -107,22 +140,26 @@
 
   smiltool = module.smiltool = {}
 
-  smiltool.smil-to-svg = smil-to-svg = (root, delay) -> new Promise (res, rej) ->
-    root.pauseAnimations!
-    if delay? => root.setCurrentTime delay
-    # setTimeout takes 0.3s in firefox. we may still need it for not been offseted
-    #<- setTimeout _, 0
-    hash = {}
-    <- fetch-images(root, hash).then
-    ret = traverse root, {hrefs: hash}
-    root.unpauseAnimations!
-    res """<?xml version="1.0" encoding="utf-8"?>#ret"""
+  smiltool.smil-to-svg = smil-to-svg = (root, delay, option = {}) ->
+    new Promise (res, rej) ->
+      hash = {}
+      root.pauseAnimations!
+      if delay? => root.setCurrentTime delay
+      # redraw needs a break and takes time, and setTimeout takes 0.3s in firefox.
+      # here we use an option to turn it on, and use requestAnimationFrame for optimization
+      _ = ->
+        <- fetch-images(root, hash).then
+        if option.css-animation => prepare root, option, delay
+        ret = traverse root, {hrefs: hash} <<< option
+        root.unpauseAnimations!
+        res """<?xml version="1.0" encoding="utf-8"?>#ret"""
+      if option.force-redraw => requestAnimationFrame(-> _ it) else _!
 
   smiltool.svg-to-dataurl = svg-to-dataurl = (svg) -> new Promise (res, rej) ->
     res "data:image/svg+xml;base64,#{btoa svg}"
 
-  smiltool.smil-to-dataurl = smil-to-dataurl = (root, delay) ->
-    smil-to-svg root, delay .then (svg) -> svg-to-dataurl svg
+  smiltool.smil-to-dataurl = smil-to-dataurl = (root, delay, option) ->
+    smil-to-svg root, delay, option .then (svg) -> svg-to-dataurl svg
 
   smiltool.dataurl-to-img = dataurl-to-img = (url, width = 100, height = 100, type = "image/png", quality = 0.92) ->
     new Promise (res, rej) ->
@@ -136,11 +173,11 @@
         res canvas.toDataURL(type, quality)
       img.src = url
 
-  smiltool.smil-to-img = smil-to-img = (root, width = 100, height = 100, delay, type = "image/png", quality = 0.92) ->
-    smil-to-dataurl root, delay .then (dataurl) -> dataurl-to-img dataurl, width, height, type, quality
+  smiltool.smil-to-img = smil-to-img = (root, width=100, height=100, delay, type="image/png", quality=0.92, option) ->
+    smil-to-dataurl root, delay, option .then (dataurl) -> dataurl-to-img dataurl, width, height, type, quality
 
-  smiltool.smil-to-png = smil-to-png = (root, width = 100, height = 100, delay, quality = 0.92) ->
-    smil-to-img root, width, height, delay, "image/png", quality
+  smiltool.smil-to-png = smil-to-png = (root, width = 100, height = 100, delay, quality = 0.92, option) ->
+    smil-to-img root, width, height, delay, "image/png", quality, option
 
   smiltool.dataurl-to-i8a = dataurl-to-i8a = (url) -> new Promise (res, rej) ->
     bin = atob uri.split \, .1
@@ -170,8 +207,8 @@
       .then (url) -> dataurl-to-i8a url
       .then (i8a) -> i8a-to-blob i8a, type
 
-  smiltool.smil-to-blob = svg-to-blob = (svg, delay, type = \image/png) ->
-    smil-to-svg root, delay .then (svg) ->
+  smiltool.smil-to-blob = svg-to-blob = (svg, delay, type = \image/png, option) ->
+    smil-to-svg root, delay, option .then (svg) ->
       svg-to-dataurl svg .then (url) ->
       dataurl-to-i8a url .then (i8a) ->
       i8a-to-blob i8a, type
@@ -210,7 +247,7 @@
       img.src = url
 
   if GIF? =>
-    smiltool.smil-to-gif = (node, param-option = {}, param-gif-option = {}) -> new Promise (res, rej) ->
+    smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
       imgs = []
       option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
       gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
@@ -226,7 +263,7 @@
         option.progress p
         if t > option.duration => return gif.render!
         if param-option.step => param-option.step t
-        (ret) <- smil-to-svg node, t .then
+        (ret) <- smil-to-svg node, t, smil2svgopt .then
         img = new Image!
         img.style
           ..width  = "#{option.width}px"
