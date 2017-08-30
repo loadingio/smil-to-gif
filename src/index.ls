@@ -126,6 +126,7 @@
         attrs.push [v.name , option.hrefs[v.value]]
       else attrs.push [v.name, v.value]
     for k,v of animatedProperties => attrs.push [k, v]
+    styles.sort (a,b) -> if b.0 > a.0 => 1 else if b.0 < a.0 => -1 else 0
     ret = [
       "<#{node.nodeName}"
       """ #{attrs.map(->"#{it.0}=\"#{it.1}\"").join(" ")}""" if attrs.length

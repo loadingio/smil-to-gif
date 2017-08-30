@@ -208,6 +208,15 @@
       v = animatedProperties[k];
       attrs.push([k, v]);
     }
+    styles.sort(function(a, b){
+      if (b[0] > a[0]) {
+        return 1;
+      } else if (b[0] < a[0]) {
+        return -1;
+      } else {
+        return 0;
+      }
+    });
     ret = [
       "<" + node.nodeName, attrs.length ? " " + attrs.map(function(it){
         return it[0] + "=\"" + it[1] + "\"";
@@ -432,7 +441,6 @@
         _ = function(t){
           var p, ref$;
           p = (ref$ = 100 * t / option.duration) < 100 ? ref$ : 100;
-          console.log(p);
           option.progress(p);
           if (t > option.duration) {
             return gif.render();
@@ -448,7 +456,6 @@
             x$.height = option.height + "px";
             img.src = "data:image/svg+xml;base64," + btoa(ret);
             delay = Math.round(option.duration * 1000 / option.frames);
-            console.log(delay);
             gif.addFrame(img, {
               delay: delay
             });
