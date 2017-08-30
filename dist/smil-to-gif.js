@@ -269,7 +269,7 @@
   };
   smiltool.svgToDataurl = svgToDataurl = function(svg){
     return new Promise(function(res, rej){
-      return res("data:image/svg+xml;base64," + btoa(svg));
+      return res("data:image/svg+xml," + encodeURIComponent(svg));
     });
   };
   smiltool.smilToDataurl = smilToDataurl = function(root, delay, option){
@@ -461,7 +461,7 @@
             x$ = img.style;
             x$.width = option.width + "px";
             x$.height = option.height + "px";
-            img.src = "data:image/svg+xml;base64," + btoa(ret);
+            img.src = "data:image/svg+xml;," + encodeURIComponent(ret);
             delay = Math.round(option.duration * 1000 / option.frames);
             gif.addFrame(img, {
               delay: delay

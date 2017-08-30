@@ -160,7 +160,8 @@
       if option.force-redraw => requestAnimationFrame(-> _ it) else _!
 
   smiltool.svg-to-dataurl = svg-to-dataurl = (svg) -> new Promise (res, rej) ->
-    res "data:image/svg+xml;base64,#{btoa svg}"
+    #res "data:image/svg+xml;base64,#{btoa svg}"
+    res "data:image/svg+xml,#{encodeURIComponent svg}"
 
   smiltool.smil-to-dataurl = smil-to-dataurl = (root, delay, option) ->
     smil-to-svg root, delay, option .then (svg) -> svg-to-dataurl svg
@@ -272,7 +273,8 @@
         img.style
           ..width  = "#{option.width}px"
           ..height = "#{option.height}px"
-        img.src = "data:image/svg+xml;base64,#{btoa ret}"
+        #img.src = "data:image/svg+xml;base64,#{btoa ret}"
+        img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
         delay = Math.round(option.duration * 1000 / option.frames)
         gif.addFrame img, { delay }
         imgs.push img
