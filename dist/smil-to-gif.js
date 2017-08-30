@@ -131,7 +131,7 @@
     }
     return results$;
   };
-  prepare = function(node, option, delay){
+  prepare = function(node, delay, option){
     var ref$, p, n;
     option == null && (option = {});
     ref$ = [node.parentNode, node.nextSibling], p = ref$[0], n = ref$[1];
@@ -141,14 +141,21 @@
     } else {
       p.appendChild(node);
     }
+    if (node.pauseAnimations != null) {
+      node.pauseAnimations();
+      if (delay != null) {
+        node.setCurrentTime(delay);
+      }
+    }
     freezeTraverse(node, option, delay);
     return traverse(node, option);
   };
   dummy = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   document.body.append(dummy);
   dummyStyle = window.getComputedStyle(dummy);
-  traverse = function(node, option){
+  traverse = function(node, delay, option){
     var ref$, attrs, styles, subtags, animatedProperties, style, k, v, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
+    delay == null && (delay = 1);
     option == null && (option = {});
     if (/^#text/.exec(node.nodeName)) {
       return node.textContent;
@@ -187,7 +194,7 @@
         }
         animatedProperties[name] = animToString(value);
       } else {
-        subtags.push(traverse(child, option));
+        subtags.push(traverse(child, delay, option));
       }
     }
     for (i$ = 0, len$ = (ref$ = node.attributes).length; i$ < len$; ++i$) {
@@ -242,9 +249,9 @@
         return fetchImages(root, hash).then(function(){
           var ret;
           if (option.cssAnimation) {
-            prepare(root, option, delay);
+            prepare(root, delay, option);
           }
-          ret = traverse(root, import$({
+          ret = traverse(root, delay, import$({
             hrefs: hash
           }, option));
           root.unpauseAnimations();

@@ -73,11 +73,14 @@
       child = node.childNodes[i]
       freeze-traverse child, option, delay
 
-  prepare = (node, option = {}, delay) ->
+  prepare = (node, delay, option = {}) ->
     # reset animation so we can get precisely the value with delay
     [p,n] = [node.parentNode, node.nextSibling]
     p.removeChild node
     if n => p.insertBefore(node, n) else p.appendChild node
+    if node.pauseAnimations? =>
+      node.pauseAnimations!
+      if delay? => node.setCurrentTime delay
     freeze-traverse node, option, delay
     traverse node, option
 
@@ -85,7 +88,7 @@
   document.body.append(dummy)
   dummy-style = window.getComputedStyle(dummy)
 
-  traverse = (node, option = {}) ->
+  traverse = (node, delay = 1, option = {}) ->
     if /^#text/.exec(node.nodeName) => return node.textContent
     else if /^#/.exec(node.nodeName) => return ""
     [attrs,styles,subtags,animatedProperties] = [[],[],[],{}]
@@ -116,7 +119,7 @@
         value = node[name] or style.getPropertyValue(name)
         if name == \d => value = (node.animatedPathSegList or node.getAttribute(\d))
         animatedProperties[name] = anim-to-string(value)
-      else subtags.push traverse(child, option)
+      else subtags.push traverse(child, delay, option)
     for v in node.attributes =>
       if v.name == \style => continue
       if animatedProperties[v.name]? =>
@@ -150,8 +153,8 @@
       # here we use an option to turn it on, and use requestAnimationFrame for optimization
       _ = ->
         <- fetch-images(root, hash).then
-        if option.css-animation => prepare root, option, delay
-        ret = traverse root, {hrefs: hash} <<< option
+        if option.css-animation => prepare root, delay, option
+        ret = traverse root, delay, {hrefs: hash} <<< option
         root.unpauseAnimations!
         res """<?xml version="1.0" encoding="utf-8"?>#ret"""
       if option.force-redraw => requestAnimationFrame(-> _ it) else _!
