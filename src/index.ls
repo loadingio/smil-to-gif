@@ -68,7 +68,7 @@
     if !(node._delay?) => node._delay = parseFloat(style["animation-delay"] or 0)
     if !(node._dur?) => node._dur = parseFloat(style["animation-duration"] or 0)
     node.style["animation-play-state"] = "paused";
-    node.style["animation-delay"] = "#{(node._delay + -delay * node._dur)}s";
+    node.style["animation-delay"] = "#{(node._delay + -delay)}s";
     for i from 0 til node.childNodes.length =>
       child = node.childNodes[i]
       freeze-traverse child, option, delay

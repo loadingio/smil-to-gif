@@ -123,7 +123,7 @@
       node._dur = parseFloat(style["animation-duration"] || 0);
     }
     node.style["animation-play-state"] = "paused";
-    node.style["animation-delay"] = (node._delay + -delay * node._dur) + "s";
+    node.style["animation-delay"] = (node._delay + -delay) + "s";
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
       child = node.childNodes[i];
