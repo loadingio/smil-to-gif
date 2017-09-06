@@ -68,7 +68,7 @@
     if !(node._delay?) => node._delay = parseFloat(style["animation-delay"] or 0)
     if !(node._dur?) => node._dur = parseFloat(style["animation-duration"] or 0)
     node.style["animation-play-state"] = "paused";
-    node.style["animation-delay"] = "#{(node._delay + -delay)}s";
+    node.style["animation-delay"] = "#{(node._delay - delay)}s";
     for i from 0 til node.childNodes.length =>
       child = node.childNodes[i]
       freeze-traverse child, option, delay
@@ -130,6 +130,8 @@
       else attrs.push [v.name, v.value]
     for k,v of animatedProperties => attrs.push [k, v]
     styles.sort (a,b) -> if b.0 > a.0 => 1 else if b.0 < a.0 => -1 else 0
+    styles.map -> if it.1 => it.1 = it.1.replace /"/g, "'"
+    attrs.map -> if it.1 => it.1 = it.1.replace /"/g, "'"
     ret = [
       "<#{node.nodeName}"
       """ #{attrs.map(->"#{it.0}=\"#{it.1}\"").join(" ")}""" if attrs.length
@@ -185,10 +187,10 @@
     smil-to-img root, width, height, delay, "image/png", quality, option
 
   smiltool.dataurl-to-i8a = dataurl-to-i8a = (url) -> new Promise (res, rej) ->
-    bin = atob uri.split \, .1
+    bin = atob url.split(\,).1
     len = bin.length
     len32 = len .>>. 2
-    a8 = new Unit8Array len
+    a8 = new Uint8Array len
     a32 = new Uint32Array a8.buffer, 0, len32
     [i,j] = [0,0]
     for i from 0 til len32
@@ -199,7 +201,7 @@
     for i from tail-len til 0
       a8[j] = bin.charCodeAt j
       j++
-    res i8a
+    res a8
 
   smiltool.i8a-to-blob = i8a-to-blob = (i8a, type = \image/png) -> new Promise (res, rej) ->
     res new Blob([i8a], {type})
@@ -252,6 +254,66 @@
       img.src = url
 
   if GIF? =>
+    smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) ->
+      smiltool.smil-to-imgs node, param-option, smil2svgopt
+        .then (ret) -> new Promise (rs, rej) ->
+          gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
+          gif = new GIF gif-option
+          gif.on \finished, (blob) ->
+            img = new Image!
+            img.src = URL.createObjectURL blob
+            res {gif: img, frames: imgs, blob: blob}
+          for item in ret.imgs => gif.addFrame item.img, item.option
+          gif.render!
+
+  smiltool.smil-to-pngs = (node, param-option={}, smil2svgopt={}) ->
+    smiltool.smil-to-imgs node, param-option, smil2svgopt
+      .then (ret) ->
+        option = {width: 100, height: 100} <<< param-option
+        zip = new JSZip!
+        promises = ret.imgs.map (d,i) ->
+          dataurl-to-img ret.imgs[i].src
+            .then -> dataurl-to-blob it
+            .then (blob) -> zip.file "frame-#i.png", blob
+        Promise.all promises
+          .then -> zip.generate-async type: \blob
+          .then -> return {blob: it, frames: ret.imgs}
+
+  smiltool.smil-to-imgs = (node, param-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
+    imgs = []
+    option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
+    #gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
+    if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
+    if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
+    /*
+    gif = new GIF gif-option
+    gif.on \finished, (blob) ->
+      img = new Image!
+      img.src = URL.createObjectURL blob
+      res {gif: img, frames: imgs, blob: blob}
+    */
+    handler = {imgs: [], option}
+    render = -> res handler
+    _ = (t) ->
+      p = 100 * t / option.duration <? 100
+      option.progress p
+      if t > option.duration => return render! #return gif.render!
+      if param-option.step => param-option.step t
+      (ret) <- smil-to-svg node, t, smil2svgopt .then
+      img = new Image!
+      img.style
+        ..width  = "#{option.width}px"
+        ..height = "#{option.height}px"
+      img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
+      delay = Math.round(option.duration * 1000 / option.frames)
+      handler.imgs.push {img, option: {delay}, src: img.src}
+      #gif.addFrame img, { delay }
+      imgs.push img
+      setTimeout (-> _ t + (option.duration / option.frames)), option.slow
+    setTimeout (-> _ 0), option.slow
+
+  /*
+  if GIF? =>
     smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
       imgs = []
       option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
@@ -280,7 +342,7 @@
         imgs.push img
         setTimeout (-> _ t + (option.duration / option.frames)), option.slow
       setTimeout (-> _ 0), option.slow
-
+  */
 ) (if module? => module.{}exports else window)
 
 # sample usage

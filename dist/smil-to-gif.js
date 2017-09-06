@@ -123,7 +123,7 @@
       node._dur = parseFloat(style["animation-duration"] || 0);
     }
     node.style["animation-play-state"] = "paused";
-    node.style["animation-delay"] = (node._delay + -delay) + "s";
+    node.style["animation-delay"] = (node._delay - delay) + "s";
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
       child = node.childNodes[i];
@@ -224,6 +224,16 @@
         return 0;
       }
     });
+    styles.map(function(it){
+      if (it[1]) {
+        return it[1] = it[1].replace(/"/g, "'");
+      }
+    });
+    attrs.map(function(it){
+      if (it[1]) {
+        return it[1] = it[1].replace(/"/g, "'");
+      }
+    });
     ret = [
       "<" + node.nodeName, attrs.length ? " " + attrs.map(function(it){
         return it[0] + "=\"" + it[1] + "\"";
@@ -315,10 +325,10 @@
   smiltool.dataurlToI8a = dataurlToI8a = function(url){
     return new Promise(function(res, rej){
       var bin, len, len32, a8, a32, ref$, i, j, i$, tailLen;
-      bin = atob(uri.split(','))[1];
+      bin = atob(url.split(',')[1]);
       len = bin.length;
       len32 = len >> 2;
-      a8 = new Unit8Array(len);
+      a8 = new Uint8Array(len);
       a32 = new Uint32Array(a8.buffer, 0, len32);
       ref$ = [0, 0], i = ref$[0], j = ref$[1];
       for (i$ = 0; i$ < len32; ++i$) {
@@ -331,7 +341,7 @@
         a8[j] = bin.charCodeAt(j);
         j++;
       }
-      return res(i8a);
+      return res(a8);
     });
   };
   smiltool.i8aToBlob = i8aToBlob = function(i8a, type){
@@ -409,75 +419,136 @@
     });
   };
   if (typeof GIF != 'undefined' && GIF !== null) {
-    return smiltool.smilToGif = function(node, paramOption, paramGifOption, smil2svgopt){
+    smiltool.smilToGif = function(node, paramOption, paramGifOption, smil2svgopt){
       paramOption == null && (paramOption = {});
       paramGifOption == null && (paramGifOption = {});
       smil2svgopt == null && (smil2svgopt = {});
-      return new Promise(function(res, rej){
-        var imgs, option, gifOption, ref$, gif, _;
-        imgs = [];
-        option = import$({
-          slow: 0,
-          width: 100,
-          height: 100,
-          frames: 30,
-          duration: 1,
-          progress: function(){}
-        }, paramOption);
-        gifOption = (ref$ = import$({
-          worker: 2,
-          quality: 1
-        }, paramGifOption), ref$.width = option.width, ref$.height = option.height, ref$);
-        if (option.duration / option.frames < 0.034) {
-          option.frames = Math.floor(option.duration / 0.034);
-        }
-        if (option.duration / option.frames > 0.1) {
-          option.frames = Math.ceil(option.duration / 0.1);
-        }
-        gif = new GIF(gifOption);
-        gif.on('finished', function(blob){
-          var img;
-          img = new Image();
-          img.src = URL.createObjectURL(blob);
-          return res({
-            gif: img,
-            frames: imgs,
-            blob: blob
-          });
-        });
-        _ = function(t){
-          var p, ref$;
-          p = (ref$ = 100 * t / option.duration) < 100 ? ref$ : 100;
-          option.progress(p);
-          if (t > option.duration) {
-            return gif.render();
-          }
-          if (paramOption.step) {
-            paramOption.step(t);
-          }
-          return smilToSvg(node, t, smil2svgopt).then(function(ret){
-            var img, x$, delay;
+      return smiltool.smilToImgs(node, paramOption, smil2svgopt).then(function(ret){
+        return new Promise(function(rs, rej){
+          var gifOption, ref$, gif, i$, len$, item;
+          gifOption = (ref$ = import$({
+            worker: 2,
+            quality: 1
+          }, paramGifOption), ref$.width = option.width, ref$.height = option.height, ref$);
+          gif = new GIF(gifOption);
+          gif.on('finished', function(blob){
+            var img;
             img = new Image();
-            x$ = img.style;
-            x$.width = option.width + "px";
-            x$.height = option.height + "px";
-            img.src = "data:image/svg+xml;," + encodeURIComponent(ret);
-            delay = Math.round(option.duration * 1000 / option.frames);
-            gif.addFrame(img, {
-              delay: delay
+            img.src = URL.createObjectURL(blob);
+            return res({
+              gif: img,
+              frames: imgs,
+              blob: blob
             });
-            imgs.push(img);
-            return setTimeout(function(){
-              return _(t + option.duration / option.frames);
-            }, option.slow);
           });
-        };
-        return setTimeout(function(){
-          return _(0);
-        }, option.slow);
+          for (i$ = 0, len$ = (ref$ = ret.imgs).length; i$ < len$; ++i$) {
+            item = ref$[i$];
+            gif.addFrame(item.img, item.option);
+          }
+          return gif.render();
+        });
       });
     };
   }
+  smiltool.smilToPngs = function(node, paramOption, smil2svgopt){
+    paramOption == null && (paramOption = {});
+    smil2svgopt == null && (smil2svgopt = {});
+    return smiltool.smilToImgs(node, paramOption, smil2svgopt).then(function(ret){
+      var option, zip, promises;
+      option = import$({
+        width: 100,
+        height: 100
+      }, paramOption);
+      zip = new JSZip();
+      promises = ret.imgs.map(function(d, i){
+        return dataurlToImg(ret.imgs[i].src).then(function(it){
+          return dataurlToBlob(it);
+        }).then(function(blob){
+          return zip.file("frame-" + i + ".png", blob);
+        });
+      });
+      return Promise.all(promises).then(function(){
+        return zip.generateAsync({
+          type: 'blob'
+        });
+      }).then(function(it){
+        return {
+          blob: it,
+          frames: ret.imgs
+        };
+      });
+    });
+  };
+  return smiltool.smilToImgs = function(node, paramOption, smil2svgopt){
+    paramOption == null && (paramOption = {});
+    smil2svgopt == null && (smil2svgopt = {});
+    return new Promise(function(res, rej){
+      var imgs, option, handler, render, _;
+      imgs = [];
+      option = import$({
+        slow: 0,
+        width: 100,
+        height: 100,
+        frames: 30,
+        duration: 1,
+        progress: function(){}
+      }, paramOption);
+      if (option.duration / option.frames < 0.034) {
+        option.frames = Math.floor(option.duration / 0.034);
+      }
+      if (option.duration / option.frames > 0.1) {
+        option.frames = Math.ceil(option.duration / 0.1);
+      }
+      /*
+      gif = new GIF gif-option
+      gif.on \finished, (blob) ->
+        img = new Image!
+        img.src = URL.createObjectURL blob
+        res {gif: img, frames: imgs, blob: blob}
+      */
+      handler = {
+        imgs: [],
+        option: option
+      };
+      render = function(){
+        return res(handler);
+      };
+      _ = function(t){
+        var p, ref$;
+        p = (ref$ = 100 * t / option.duration) < 100 ? ref$ : 100;
+        option.progress(p);
+        if (t > option.duration) {
+          return render();
+        }
+        if (paramOption.step) {
+          paramOption.step(t);
+        }
+        return smilToSvg(node, t, smil2svgopt).then(function(ret){
+          var img, x$, delay;
+          img = new Image();
+          x$ = img.style;
+          x$.width = option.width + "px";
+          x$.height = option.height + "px";
+          img.src = "data:image/svg+xml;," + encodeURIComponent(ret);
+          delay = Math.round(option.duration * 1000 / option.frames);
+          handler.imgs.push({
+            img: img,
+            option: {
+              delay: delay
+            },
+            src: img.src
+          });
+          imgs.push(img);
+          return setTimeout(function(){
+            return _(t + option.duration / option.frames);
+          }, option.slow);
+        });
+      };
+      return setTimeout(function(){
+        return _(0);
+      }, option.slow);
+    });
+  };
 })(typeof module != 'undefined' && module !== null ? module.exports || (module.exports = {}) : window);
 /*
 <- $ document .ready
