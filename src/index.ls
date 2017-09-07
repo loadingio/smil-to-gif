@@ -186,6 +186,13 @@
   smiltool.smil-to-png = smil-to-png = (root, width = 100, height = 100, delay, quality = 0.92, option) ->
     smil-to-img root, width, height, delay, "image/png", quality, option
 
+  smiltool.png-iend-fix = (a8) ->
+    a8[a8.length - 4] = 0xae
+    a8[a8.length - 3] = 0x42
+    a8[a8.length - 2] = 0x60
+    a8[a8.length - 1] = 0x82
+    return a8
+
   smiltool.dataurl-to-i8a = dataurl-to-i8a = (url) -> new Promise (res, rej) ->
     bin = atob url.split(\,).1
     len = bin.length
@@ -201,7 +208,7 @@
     for i from tail-len til 0
       a8[j] = bin.charCodeAt j
       j++
-    res a8
+    res smiltool.png-iend-fix(a8)
 
   smiltool.i8a-to-blob = i8a-to-blob = (i8a, type = \image/png) -> new Promise (res, rej) ->
     res new Blob([i8a], {type})

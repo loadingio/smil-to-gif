@@ -322,6 +322,13 @@
     quality == null && (quality = 0.92);
     return smilToImg(root, width, height, delay, "image/png", quality, option);
   };
+  smiltool.pngIendFix = function(a8){
+    a8[a8.length - 4] = 0xae;
+    a8[a8.length - 3] = 0x42;
+    a8[a8.length - 2] = 0x60;
+    a8[a8.length - 1] = 0x82;
+    return a8;
+  };
   smiltool.dataurlToI8a = dataurlToI8a = function(url){
     return new Promise(function(res, rej){
       var bin, len, len32, a8, a32, ref$, i, j, i$, tailLen;
@@ -341,7 +348,8 @@
         a8[j] = bin.charCodeAt(j);
         j++;
       }
-      return res(a8);
+      console.log("patched 4");
+      return res(smiltool.pngIendFix(a8));
     });
   };
   smiltool.i8aToBlob = i8aToBlob = function(i8a, type){
