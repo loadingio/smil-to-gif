@@ -225,12 +225,12 @@
       }
     });
     styles.map(function(it){
-      if (it[1]) {
+      if (it[1] && typeof it[1] === 'string') {
         return it[1] = it[1].replace(/"/g, "'");
       }
     });
     attrs.map(function(it){
-      if (it[1]) {
+      if (it[1] && typeof it[1] === 'string') {
         return it[1] = it[1].replace(/"/g, "'");
       }
     });
@@ -348,7 +348,6 @@
         a8[j] = bin.charCodeAt(j);
         j++;
       }
-      console.log("patched 4");
       return res(smiltool.pngIendFix(a8));
     });
   };
@@ -432,8 +431,16 @@
       paramGifOption == null && (paramGifOption = {});
       smil2svgopt == null && (smil2svgopt = {});
       return smiltool.smilToImgs(node, paramOption, smil2svgopt).then(function(ret){
-        return new Promise(function(rs, rej){
-          var gifOption, ref$, gif, i$, len$, item;
+        return new Promise(function(res, rej){
+          var option, gifOption, ref$, gif, i$, len$, item;
+          option = import$({
+            slow: 0,
+            width: 100,
+            height: 100,
+            frames: 30,
+            duration: 1,
+            progress: function(){}
+          }, paramOption);
           gifOption = (ref$ = import$({
             worker: 2,
             quality: 1
@@ -445,7 +452,7 @@
             img.src = URL.createObjectURL(blob);
             return res({
               gif: img,
-              frames: imgs,
+              frames: ret.imgs,
               blob: blob
             });
           });
@@ -469,7 +476,7 @@
       }, paramOption);
       zip = new JSZip();
       promises = ret.imgs.map(function(d, i){
-        return dataurlToImg(ret.imgs[i].src).then(function(it){
+        return dataurlToImg(ret.imgs[i].src, option.width, option.height).then(function(it){
           return dataurlToBlob(it);
         }).then(function(blob){
           return zip.file("frame-" + i + ".png", blob);

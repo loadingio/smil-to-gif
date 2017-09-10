@@ -130,8 +130,8 @@
       else attrs.push [v.name, v.value]
     for k,v of animatedProperties => attrs.push [k, v]
     styles.sort (a,b) -> if b.0 > a.0 => 1 else if b.0 < a.0 => -1 else 0
-    styles.map -> if it.1 => it.1 = it.1.replace /"/g, "'"
-    attrs.map -> if it.1 => it.1 = it.1.replace /"/g, "'"
+    styles.map -> if it.1 and typeof(it.1) == \string => it.1 = it.1.replace /"/g, "'"
+    attrs.map -> if it.1 and typeof(it.1) == \string => it.1 = it.1.replace /"/g, "'"
     ret = [
       "<#{node.nodeName}"
       """ #{attrs.map(->"#{it.0}=\"#{it.1}\"").join(" ")}""" if attrs.length
@@ -263,13 +263,14 @@
   if GIF? =>
     smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) ->
       smiltool.smil-to-imgs node, param-option, smil2svgopt
-        .then (ret) -> new Promise (rs, rej) ->
+        .then (ret) -> new Promise (res, rej) ->
+          option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
           gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
           gif = new GIF gif-option
           gif.on \finished, (blob) ->
             img = new Image!
             img.src = URL.createObjectURL blob
-            res {gif: img, frames: imgs, blob: blob}
+            res {gif: img, frames: ret.imgs, blob: blob}
           for item in ret.imgs => gif.addFrame item.img, item.option
           gif.render!
 
@@ -279,7 +280,7 @@
         option = {width: 100, height: 100} <<< param-option
         zip = new JSZip!
         promises = ret.imgs.map (d,i) ->
-          dataurl-to-img ret.imgs[i].src
+          dataurl-to-img ret.imgs[i].src, option.width, option.height
             .then -> dataurl-to-blob it
             .then (blob) -> zip.file "frame-#i.png", blob
         Promise.all promises
