@@ -167,7 +167,7 @@
     if (option.cssAnimation || option.withCss) {
       for (k in style) {
         v = style[k];
-        if (!(/^\d+$|^cssText$/.exec(k) || dummyStyle[k] === v)) {
+        if (!(/^\d+$|^cssText$/.exec(k) || dummyStyle[k] === v) && !(option.noAnimation && /animation/.exec(k))) {
           styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
         }
       }
@@ -179,6 +179,9 @@
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
       child = node.childNodes[i];
+      if (/^animate/.exec(child.nodeName) && option.noAnimation) {
+        continue;
+      }
       if (/^animateMotion/.exec(child.nodeName)) {
         dur = child.getSimpleDuration();
         begin = +child.getAttribute("begin").replace("s", "");
@@ -214,6 +217,15 @@
     for (k in animatedProperties) {
       v = animatedProperties[k];
       attrs.push([k, v]);
+    }
+    if (option.noAnimation) {
+      attrs.map(function(it){
+        if (it[0] === 'class') {
+          return it[1] = it[1].split(' ').filter(function(it){
+            return !/^ld-/.exec(it);
+          }).join(' ');
+        }
+      });
     }
     styles.sort(function(a, b){
       if (b[0] > a[0]) {

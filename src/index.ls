@@ -97,7 +97,7 @@
     # track styles
     if option.css-animation or option.with-css =>
       for k,v of style =>
-        if !(/^\d+$|^cssText$/.exec(k) or dummy-style[k] == v) =>
+        if !(/^\d+$|^cssText$/.exec(k) or dummy-style[k] == v) and !(option.no-animation and /animation/.exec(k)) =>
           styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
 
     if node.nodeName == \svg =>
@@ -105,6 +105,7 @@
       animatedProperties["xmlns:xlink"] = "http://www.w3.org/1999/xlink"
     for i from 0 til node.childNodes.length =>
       child = node.childNodes[i]
+      if /^animate/.exec(child.nodeName) and option.no-animation => continue
       if /^animateMotion/.exec(child.nodeName) =>
         dur = child.getSimpleDuration!
         begin = +child.getAttribute("begin").replace("s","")
@@ -129,6 +130,9 @@
         attrs.push [v.name , option.hrefs[v.value]]
       else attrs.push [v.name, v.value]
     for k,v of animatedProperties => attrs.push [k, v]
+    if option.no-animation => attrs.map(->
+      if it.0 == \class => it.1 = it.1.split(' ').filter(->!/^ld-/.exec(it)).join(' ')
+    )
     styles.sort (a,b) -> if b.0 > a.0 => 1 else if b.0 < a.0 => -1 else 0
     styles.map -> if it.1 and typeof(it.1) == \string => it.1 = it.1.replace /"/g, "'"
     attrs.map -> if it.1 and typeof(it.1) == \string => it.1 = it.1.replace /"/g, "'"
