@@ -40,7 +40,7 @@
       canvas = document.createElement \canvas
       canvas <<< {width, height}
       ctx = canvas.getContext \2d
-      ctx.fillStyle = \#ffff00
+      ctx.fillStyle = \#ffffff
       ctx.fillRect 0, 0, width, height
       ctx.drawImage img, 0, 0, width, height
       res canvas.toDataURL!
@@ -67,11 +67,18 @@
     style = window.getComputedStyle(node)
     if !(node._delay?) => node._delay = parseFloat(style["animation-delay"] or 0)
     if !(node._dur?) => node._dur = parseFloat(style["animation-duration"] or 0)
-    node.style["animation-play-state"] = "paused";
-    node.style["animation-delay"] = "#{(node._delay - delay)}s";
+    node.style["animation-play-state"] = "paused"
+    node.style["animation-delay"] = "#{(node._delay - delay)}s"
     for i from 0 til node.childNodes.length =>
       child = node.childNodes[i]
       freeze-traverse child, option, delay
+
+  restore-animation = (node) ->
+    if /^#text/.exec(node.nodeName) => return node.textContent
+    else if /^#/.exec(node.nodeName) => return ""
+    node.style["animation-play-state"] = "running"
+    node.style["animation-delay"] = "#{node._delay or 0}s"
+    for i from 0 til node.childNodes.length => restore-animation node.childNodes[i]
 
   prepare = (node, delay, option = {}) ->
     # reset animation so we can get precisely the value with delay
@@ -161,6 +168,7 @@
         <- fetch-images(root, hash).then
         if option.css-animation => prepare root, delay, option
         ret = traverse root, delay, {hrefs: hash} <<< option
+        if option.css-animation => restore-animation root
         root.unpauseAnimations!
         res """<?xml version="1.0" encoding="utf-8"?>#ret"""
       if option.force-redraw => requestAnimationFrame(-> _ it) else _!
@@ -251,6 +259,7 @@
         canvas.width = w
         canvas.height = h
         ctx = canvas.getContext \2d
+        ctx.clearRect 0, 0, w, h
         ctx.fillStyle = \#ffffff
         ctx.fillRect 0, 0, w, h
         ctx.drawImage(
@@ -294,16 +303,9 @@
   smiltool.smil-to-imgs = (node, param-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
     imgs = []
     option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
-    #gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
     if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
     if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
-    /*
-    gif = new GIF gif-option
-    gif.on \finished, (blob) ->
-      img = new Image!
-      img.src = URL.createObjectURL blob
-      res {gif: img, frames: imgs, blob: blob}
-    */
+
     handler = {imgs: [], option}
     render = -> res handler
     _ = (t) ->
@@ -319,7 +321,6 @@
       img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
       delay = Math.round(option.duration * 1000 / option.frames)
       handler.imgs.push {img, option: {delay}, src: img.src}
-      #gif.addFrame img, { delay }
       imgs.push img
       setTimeout (-> _ t + (option.duration / option.frames)), option.slow
     setTimeout (-> _ 0), option.slow
