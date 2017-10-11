@@ -40,7 +40,8 @@
       canvas = document.createElement \canvas
       canvas <<< {width, height}
       ctx = canvas.getContext \2d
-      ctx.fillStyle = \#ffffff
+      ctx.clearRect 0, 0, width, height
+      ctx.fillStyle = 'rgba(255,255,255,0)'
       ctx.fillRect 0, 0, width, height
       ctx.drawImage img, 0, 0, width, height
       res canvas.toDataURL!
@@ -261,6 +262,7 @@
         ctx = canvas.getContext \2d
         ctx.clearRect 0, 0, w, h
         ctx.fillStyle = \#ffffff
+        ctx.fillStyle = 'rgba(255,255,255,0)'
         ctx.fillRect 0, 0, w, h
         ctx.drawImage(
           img,

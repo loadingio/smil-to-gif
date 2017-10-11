@@ -72,7 +72,8 @@
         canvas.width = width;
         canvas.height = height;
         ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = 'rgba(255,255,255,0)';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
         return res(canvas.toDataURL());
@@ -132,7 +133,7 @@
     return results$;
   };
   restoreAnimation = function(node){
-    var i$, to$, i, child, results$ = [];
+    var i$, to$, i, results$ = [];
     if (/^#text/.exec(node.nodeName)) {
       return node.textContent;
     } else if (/^#/.exec(node.nodeName)) {
@@ -142,8 +143,7 @@
     node.style["animation-delay"] = (node._delay || 0) + "s";
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
-      child = node.childNodes[i];
-      results$.push(restoreAnimation(child));
+      results$.push(restoreAnimation(node.childNodes[i]));
     }
     return results$;
   };
@@ -447,6 +447,7 @@
         ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, w, h);
         ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = 'rgba(255,255,255,0)';
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, img.width, img.height, (w - img.width) / 2, (h - img.height) / 2, img.width, img.height);
         dataurl = canvas.toDataURL(type, quality);
