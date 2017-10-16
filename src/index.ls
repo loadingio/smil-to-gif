@@ -4,7 +4,7 @@
     for i from 0 til list.numberOfItems =>
       item = list.getItem i
       ret.push (
-      item.pathSegTypeAsLetter + 
+      item.pathSegTypeAsLetter +
       <[r1 r2 angle largeArcFlag sweepFlag x1 y1 x2 y2 x y]>
         .filter -> item[it]?
         .map -> if it in <[largeArcFlag sweepFlag]> => (if item[it] => 1 else 0) else item[it]
@@ -35,8 +35,10 @@
   fetch-image = (url, width, height) -> new Promise (res, rej) ->
     if /^data:/.exec(url) => return res url
     img = new Image!
-    img <<< width: "#{width}px", height: "#{height}px"
+    img <<< width: "#{width}px" if width
+    img <<< height: "#{height}px" if height
     img.onload = ->
+      [width,height] = [img.width, img.height]
       canvas = document.createElement \canvas
       canvas <<< {width, height}
       ctx = canvas.getContext \2d
@@ -181,7 +183,7 @@
   smiltool.smil-to-dataurl = smil-to-dataurl = (root, delay, option) ->
     smil-to-svg root, delay, option .then (svg) -> svg-to-dataurl svg
 
-  smiltool.dataurl-to-img = dataurl-to-img = (url, width = 100, height = 100, type = "image/png", quality = 0.92) ->
+  smiltool.url-to-dataurl = url-to-dataurl = (url, width = 100, height = 100, type = "image/png", quality = 0.92) ->
     new Promise (res, rej) ->
       img = new Image!
       img.onload = ->
@@ -192,9 +194,11 @@
         ctx.drawImage img, 0, 0, width, height
         res canvas.toDataURL(type, quality)
       img.src = url
+  #deprecated. use url-to-dataurl instead
+  smiltool.dataurl-to-img = url-to-dataurl
 
   smiltool.smil-to-img = smil-to-img = (root, width=100, height=100, delay, type="image/png", quality=0.92, option) ->
-    smil-to-dataurl root, delay, option .then (dataurl) -> dataurl-to-img dataurl, width, height, type, quality
+    smil-to-dataurl root, delay, option .then (dataurl) -> url-to-dataurl dataurl, width, height, type, quality
 
   smiltool.smil-to-png = smil-to-png = (root, width = 100, height = 100, delay, quality = 0.92, option) ->
     smil-to-img root, width, height, delay, "image/png", quality, option
@@ -207,7 +211,9 @@
     return a8
 
   smiltool.dataurl-to-i8a = dataurl-to-i8a = (url) -> new Promise (res, rej) ->
-    bin = atob url.split(\,).1
+    content = url.split(\,).1
+    if /base64/.exec(url) => bin = atob content
+    else bin = decodeURIComponent content
     len = bin.length
     len32 = len .>>. 2
     a8 = new Uint8Array len
@@ -295,7 +301,7 @@
         option = {width: 100, height: 100} <<< param-option
         zip = new JSZip!
         promises = ret.imgs.map (d,i) ->
-          dataurl-to-img ret.imgs[i].src, option.width, option.height
+          url-to-dataurl ret.imgs[i].src, option.width, option.height
             .then -> dataurl-to-blob it
             .then (blob) -> zip.file "frame-#i.png", blob
         Promise.all promises
@@ -327,37 +333,128 @@
       setTimeout (-> _ t + (option.duration / option.frames)), option.slow
     setTimeout (-> _ 0), option.slow
 
-  /*
-  if GIF? =>
-    smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
-      imgs = []
-      option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
-      gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
-      if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
-      if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
-      gif = new GIF gif-option
-      gif.on \finished, (blob) ->
-        img = new Image!
-        img.src = URL.createObjectURL blob
-        res {gif: img, frames: imgs, blob: blob}
-      _ = (t) ->
-        p = 100 * t / option.duration <? 100
-        option.progress p
-        if t > option.duration => return gif.render!
-        if param-option.step => param-option.step t
-        (ret) <- smil-to-svg node, t, smil2svgopt .then
-        img = new Image!
-        img.style
-          ..width  = "#{option.width}px"
-          ..height = "#{option.height}px"
-        #img.src = "data:image/svg+xml;base64,#{btoa ret}"
-        img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
-        delay = Math.round(option.duration * 1000 / option.frames)
-        gif.addFrame img, { delay }
-        imgs.push img
-        setTimeout (-> _ t + (option.duration / option.frames)), option.slow
-      setTimeout (-> _ 0), option.slow
-  */
+  iBuffer = (input) ->
+    if typeof(input) == \number =>
+      @ua = new Uint8Array input
+      @length = input
+    else
+      @ua = input
+      @length = input.length
+    return @
+
+  iBuffer.concat = (...bufs) ->
+    length = bufs.reduce(((a,b) -> a + b.length), 0)
+    buf = new iBuffer length
+    offset = 0
+    for i from 0 til bufs.length =>
+      buf.ua.set bufs[i].ua, offset
+      offset += bufs[i].length
+    return buf
+
+  iBuffer.prototype <<< do
+    readUInt32BE: (position) ->
+      ret = 0
+      for i from 0 to 3 =>
+        ret *= 0x100
+        ret += +@ua[position + i]
+      ret
+    readUInt8: (position) -> return @ua[position]
+    writeUIntBE: (value, position, bytes = 4) ->
+      for i from (bytes - 1) to 0 by -1 =>
+        @ua[position + (bytes - 1) - i] = (value .>>. (8 * i)) .&. 0xff
+    writeUInt32BE: (value, position) ->
+      @writeUIntBE value, position, 4
+    writeUInt16BE: (value, position) -> @writeUIntBE value, position, 2
+    writeUInt8:    (value, position) -> @writeUIntBE value, position, 1
+    write: (value="", position) ->
+      for i from 0 til value.length => @ua[position + i] = (value.charCodeAt(i) .&. 0xff)
+    slice: (a,b) ->
+      new iBuffer(@ua.slice a,b)
+    copy: (des, ts = 0, ss = 0, se) ->
+      if !se => se = @ua.length
+      for i from 0 til se - ss => des.writeUInt8 @readUInt8(ss + i), ts + i
+    toString: (encoding)->
+      ret = ""
+      for i from 0 til @length => ret += String.fromCharCode(@ua[i])
+      ret
+
+  apngtool = do
+    find-chunk: (buf, type) ->
+      offset = 8
+      while offset < buf.length
+        chunk-length = buf.readUInt32BE offset
+        chunk-type = buf.slice(offset + 4, offset + 8).toString(\ascii)
+        if chunk-type == type =>
+          ret = buf.slice(offset, offset + chunk-length + 12)
+          return buf.slice(offset, offset + chunk-length + 12)
+        offset += (4 + 4 + chunk-length + 4)
+      throw new Error("chunk #type not found")
+
+    animate-frame: (buf, idx, delay) ->
+      ihdr = apngtool.find-chunk buf, \IHDR
+      idat = apngtool.find-chunk buf, \IDAT
+      delay-numerator = Math.round(delay * 1000)
+      delay-denominator = 1000
+      fctl = new iBuffer 38
+      fctl.writeUInt32BE 26, 0                                 # length of chunk
+      fctl.write \fcTL, 4                                      # type of chunk
+      fctl.writeUInt32BE (if idx => idx * 2 - 1 else 0), 8     # sequence number
+      fctl.writeUInt32BE ihdr.readUInt32BE(8), 12              # width
+      fctl.writeUInt32BE ihdr.readUInt32BE(12), 16             # height
+      fctl.writeUInt32BE 0, 20                                 # x offset
+      fctl.writeUInt32BE 0, 24                                 # y offset
+      fctl.writeUInt16BE delay-numerator, 28                   # frame delay - fraction numerator
+      fctl.writeUInt16BE delay-denominator, 30                 # frame delay - fraction denominator
+      fctl.writeUInt8 0, 32                                    # dispose mode
+      fctl.writeUInt8 0, 33                                    # blend mode
+      fctl.writeUInt32BE CRC32.buf(fctl.slice(4, fctl.length - 4).ua), 34
+      if !idx => return [idx, ihdr, iBuffer.concat(fctl, idat)]
+      length = idat.length + 4
+      fdat = new iBuffer length
+      fdat.writeUInt32BE length - 12, 0                       # length of chunk
+      fdat.write \fdAT, 4                                    # type of chunk
+      fdat.writeUInt32BE idx * 2, 8                          # sequence number
+      idat.copy fdat, 12, 8                                  # image data
+      fdat.writeUInt32BE CRC32.buf(fdat.slice(4, fdat.length - 4).ua), length - 4
+      return [idx, ihdr, iBuffer.concat(fctl, fdat)]
+
+  smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], delay = 0.033, loop-count = 0) ->
+    Promise.resolve!
+      .then ->
+        images = i8as.map (d,idx) ->
+          apngtool.animate-frame(new iBuffer(d), idx, delay)
+        signature = new iBuffer [137, 80, 78, 71, 13, 10, 26, 10]
+        ihdr = images.0.1
+        iend = new iBuffer [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
+        actl = new iBuffer 20
+        actl.writeUInt32BE 8, 0                           # chunk length
+        actl.write \acTL, 4                               # chunk type
+        actl.writeUInt32BE images.length, 8               # frame count
+        actl.writeUInt32BE 0, 12                          # loop time ( 0 = inf )
+        actl.writeUInt32BE CRC32.buf(actl.slice(4, actl.length - 4).ua), 16
+        return iBuffer.concat.apply null, ([signature, ihdr, actl] ++ images.map(->it.2) ++ [iend])
+      .then -> it.ua
+
+  smiltool.smil-to-apng-i8a = (node, param-option={}, smil2svgopt={}) ->
+    smiltool.smil-to-imgs node, param-option, smil2svgopt
+      .then (ret) ->
+        Promise.all(
+          ret.imgs.map ->
+            smiltool.url-to-dataurl it.src
+              .then -> smiltool.dataurl-to-i8a it
+        )
+      .then (i8as) ->
+        option = {frames: 30, duration: 1}  <<< param-option
+        if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
+        if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
+        delay = option.duration / option.frames
+        smiltool.i8as-to-apng-i8a i8as, delay
+
+  smiltool.smil-to-apng-blob = (node, param-option={}, smil2svgopt={}) ->
+    smiltool.smil-to-apng-i8a node, param-option, smil2svgopt
+      .then (i8a) -> smiltool.i8a-to-blob i8a, "image/apng"
+
+
 ) (if module? => module.{}exports else window)
 
 # sample usage
