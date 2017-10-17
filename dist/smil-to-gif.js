@@ -553,7 +553,6 @@ var slice$ = [].slice;
         duration: 1,
         progress: function(){}
       }, paramOption);
-      console.log("in smil-to-imgs: ", option);
       if (option.duration / option.frames < 0.034) {
         option.frames = Math.floor(option.duration / 0.034);
       }
@@ -714,8 +713,6 @@ var slice$ = [].slice;
       var ihdr, idat, delayNumerator, delayDenominator, fctl, length, fdat;
       ihdr = apngtool.findChunk(buf, 'IHDR');
       idat = apngtool.findChunk(buf, 'IDAT');
-      console.log(ihdr.readUInt32BE(8));
-      console.log(ihdr.readUInt32BE(12));
       delayNumerator = Math.round(delay * 1000);
       delayDenominator = 1000;
       fctl = new iBuffer(38);
@@ -773,8 +770,6 @@ var slice$ = [].slice;
     paramOption == null && (paramOption = {});
     smil2svgopt == null && (smil2svgopt = {});
     return smiltool.smilToImgs(node, paramOption, smil2svgopt).then(function(ret){
-      console.log(">", paramOption, smil2svgopt);
-      console.log(ret);
       return Promise.all(ret.imgs.map(function(it){
         return smiltool.urlToDataurl(it.src, it.img.width, it.img.height).then(function(it){
           return smiltool.dataurlToI8a(it);
