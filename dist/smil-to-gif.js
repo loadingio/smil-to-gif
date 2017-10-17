@@ -747,7 +747,9 @@ var slice$ = [].slice;
     loopCount == null && (loopCount = 0);
     return Promise.resolve().then(function(){
       var images, signature, ihdr, iend, actl;
-      images = i8as.map(function(d, idx){
+      images = i8as.filter(function(it){
+        return it.length;
+      }).map(function(d, idx){
         return apngtool.animateFrame(new iBuffer(d), idx, delay);
       });
       signature = new iBuffer([137, 80, 78, 71, 13, 10, 26, 10]);

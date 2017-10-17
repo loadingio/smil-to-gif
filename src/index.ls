@@ -422,7 +422,7 @@
   smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], delay = 0.033, loop-count = 0) ->
     Promise.resolve!
       .then ->
-        images = i8as.map (d,idx) ->
+        images = i8as.filter(->it.length).map (d,idx) ->
           apngtool.animate-frame(new iBuffer(d), idx, delay)
         signature = new iBuffer [137, 80, 78, 71, 13, 10, 26, 10]
         ihdr = images.0.1
