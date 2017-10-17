@@ -393,6 +393,7 @@
     animate-frame: (buf, idx, delay) ->
       ihdr = apngtool.find-chunk buf, \IHDR
       idat = apngtool.find-chunk buf, \IDAT
+
       delay-numerator = Math.round(delay * 1000)
       delay-denominator = 1000
       fctl = new iBuffer 38
@@ -440,7 +441,7 @@
       .then (ret) ->
         Promise.all(
           ret.imgs.map ->
-            smiltool.url-to-dataurl it.src
+            smiltool.url-to-dataurl it.src, it.img.width, it.img.height
               .then -> smiltool.dataurl-to-i8a it
         )
       .then (i8as) ->
