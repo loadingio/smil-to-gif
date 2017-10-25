@@ -176,7 +176,7 @@ var slice$ = [].slice;
   document.body.append(dummy);
   dummyStyle = window.getComputedStyle(dummy);
   traverse = function(node, delay, option){
-    var ref$, attrs, styles, subtags, animatedProperties, style, k, v, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
+    var ref$, attrs, styles, subtags, animatedProperties, style, k, v, attr, inlineStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
     delay == null && (delay = 1);
     option == null && (option = {});
     if (/^#text/.exec(node.nodeName)) {
@@ -189,7 +189,9 @@ var slice$ = [].slice;
     if (option.cssAnimation || option.withCss) {
       for (k in style) {
         v = style[k];
-        if (!(/^\d+$|^cssText$/.exec(k) || dummyStyle[k] === v) && !(option.noAnimation && /animation/.exec(k))) {
+        attr = node.getAttribute(k);
+        inlineStyle = node.getAttribute('style') || '';
+        if (!(/^\d+$|^cssText$/.exec(k) || (dummyStyle[k] === v && !~inlineStyle.indexOf(k))) && !(option.noAnimation && /animation/.exec(k))) {
           styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
         }
       }

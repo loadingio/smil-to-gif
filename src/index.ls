@@ -107,7 +107,12 @@
     # track styles
     if option.css-animation or option.with-css =>
       for k,v of style =>
-        if !(/^\d+$|^cssText$/.exec(k) or dummy-style[k] == v) and !(option.no-animation and /animation/.exec(k)) =>
+        attr = node.getAttribute(k)
+        inline-style = node.getAttribute('style') or ''
+        if (
+          !(/^\d+$|^cssText$/.exec(k) or (dummy-style[k] == v and !~inline-style.indexOf(k))) and
+          !(option.no-animation and /animation/.exec(k))
+        ) =>
           styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
 
     if node.nodeName == \svg =>
