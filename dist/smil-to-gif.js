@@ -94,7 +94,7 @@ var slice$ = [].slice;
     if (/^#/.exec(node.nodeName)) {
       return [];
     }
-    href = node.getAttribute('xlink:href');
+    href = node.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || node.getAttribute('href');
     if (href && !/^#/.exec(href)) {
       width = node.getAttribute('width');
       height = node.getAttribute('height');
@@ -173,7 +173,9 @@ var slice$ = [].slice;
     return traverse(node, option);
   };
   dummy = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  document.body.append(dummy);
+  if (document.body) {
+    document.body.appendChild(dummy);
+  }
   dummyStyle = window.getComputedStyle(dummy);
   traverse = function(node, delay, option){
     var ref$, attrs, styles, subtags, animatedProperties, style, k, v, attr, inlineStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
@@ -232,7 +234,7 @@ var slice$ = [].slice;
       if (animatedProperties[v.name] != null) {
         attrs.push([v.name, animatedProperties[v.name]]);
         delete animatedProperties[v.name];
-      } else if (v.name === 'xlink:href' && option.hrefs && option.hrefs[v.value]) {
+      } else if ((v.name === 'xlink:href' || v.name === 'href') && option.hrefs && option.hrefs[v.value]) {
         attrs.push([v.name, option.hrefs[v.value]]);
       } else {
         attrs.push([v.name, v.value]);
