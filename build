@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+mkdir -p dist
+
+echo "Transpiling LiveScript..." 
+./node_modules/.bin/lsc -cbp src/index.ls > dist/smiltool.js
+
+echo "Uglify anikit.bundle.js ..."
+./node_modules/.bin/uglifyjs dist/smiltool.js > dist/smiltool.min.js
+
+echo "Done."

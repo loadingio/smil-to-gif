@@ -1,0 +1,27 @@
+{
+  "author": "Kirby Wu",
+  "name": "smiltool",
+  "description": "Toolkit for animated images",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "homepage": "https://github.com/loadingio/smil-to-gif",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loadingio/smil-to-gif"
+  },
+  "engines": {
+    "node": ">=0.12.6",
+    "npm": ">=1.2.2"
+  },
+  "scripts": {
+    "start": "node_modules/.bin/lsc web/server.ls"
+  },
+  "devDependencies": {
+    "LiveScript": ">=1.2.0",
+    "browserify": "^16.2.3",
+    "fs-extra": "^7.0.1",
+    "uglify-js": "^3.2.0"
+  },
+  "dependencies": {}
+}

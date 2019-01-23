@@ -96,14 +96,18 @@
     traverse node, option
 
   dummy = document.createElementNS("http://www.w3.org/2000/svg", "circle")
-  if document.body => document.body.appendChild(dummy)
-  dummy-style = window.getComputedStyle(dummy)
+  get-dummy-style = ->
+    if !dummy.def-style =>
+      if !dummy.parentNode => document.body.appendChild(dummy)
+      dummy.def-style = window.getComputedStyle(dummy)
+    return dummy.def-style
 
   traverse = (node, delay = 1, option = {}) ->
     if /^#text/.exec(node.nodeName) => return node.textContent
     else if /^#/.exec(node.nodeName) => return ""
     [attrs,styles,subtags,animatedProperties] = [[],[],[],{}]
     style = getComputedStyle(node)
+    dummy-style = get-dummy-style!
 
     # track styles
     if option.css-animation or option.with-css =>
@@ -288,31 +292,36 @@
       img.src = url
 
   if GIF? =>
+    smiltool.imgs-to-gif = (data, param-option, param-gif-option) -> new Promise (res, rej) ->
+      option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
+      gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
+      gif = new GIF gif-option
+      gif.on \finished, (blob) ->
+        img = new Image!
+        img.src = URL.createObjectURL blob
+        res {gif: img, frames: data.imgs, blob: blob}
+      for item in data.imgs => gif.addFrame item.img, item.option
+      gif.render!
+
     smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) ->
       smiltool.smil-to-imgs node, param-option, smil2svgopt
-        .then (ret) -> new Promise (res, rej) ->
-          option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
-          gif-option = { worker: 2, quality: 1 } <<< param-gif-option <<< option{width, height}
-          gif = new GIF gif-option
-          gif.on \finished, (blob) ->
-            img = new Image!
-            img.src = URL.createObjectURL blob
-            res {gif: img, frames: ret.imgs, blob: blob}
-          for item in ret.imgs => gif.addFrame item.img, item.option
-          gif.render!
+        .then (ret) -> smiltool.imgs-to-gif ret, param-option, param-gif-option
+
+  smiltool.imgs-to-pngs = (data, param-option={}) ->
+    option = {width: 100, height: 100} <<< param-option
+    zip = new JSZip!
+    promises = data.imgs.map (d,i) ->
+      url-to-dataurl data.imgs[i].src, option.width, option.height
+        .then -> dataurl-to-blob it
+        .then (blob) -> zip.file "frame-#i.png", blob
+    Promise.all promises
+      .then -> zip.generate-async type: \blob
+      .then -> return {blob: it, frames: ret.imgs}
+
 
   smiltool.smil-to-pngs = (node, param-option={}, smil2svgopt={}) ->
     smiltool.smil-to-imgs node, param-option, smil2svgopt
-      .then (ret) ->
-        option = {width: 100, height: 100} <<< param-option
-        zip = new JSZip!
-        promises = ret.imgs.map (d,i) ->
-          url-to-dataurl ret.imgs[i].src, option.width, option.height
-            .then -> dataurl-to-blob it
-            .then (blob) -> zip.file "frame-#i.png", blob
-        Promise.all promises
-          .then -> zip.generate-async type: \blob
-          .then -> return {blob: it, frames: ret.imgs}
+      .then (ret) -> smiltool.imgs-to-pngs ret, param-option
 
   smiltool.smil-to-imgs = (node, param-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
     imgs = []
@@ -387,19 +396,20 @@
   apngtool = do
     find-chunk: (buf, type) ->
       offset = 8
+      ret = []
       while offset < buf.length
         chunk-length = buf.readUInt32BE offset
         chunk-type = buf.slice(offset + 4, offset + 8).toString(\ascii)
         if chunk-type == type =>
-          ret = buf.slice(offset, offset + chunk-length + 12)
-          return buf.slice(offset, offset + chunk-length + 12)
+          #return buf.slice(offset, offset + chunk-length + 12)
+          ret.push buf.slice(offset, offset + chunk-length + 12)
         offset += (4 + 4 + chunk-length + 4)
+      if ret.length => return ret
       throw new Error("chunk #type not found")
 
     animate-frame: (buf, idx, delay) ->
-      ihdr = apngtool.find-chunk buf, \IHDR
-      idat = apngtool.find-chunk buf, \IDAT
-
+      ihdr = apngtool.find-chunk(buf, \IHDR).0
+      idats = apngtool.find-chunk buf, \IDAT
       delay-numerator = Math.round(delay * 1000)
       delay-denominator = 1000
       fctl = new iBuffer 38
@@ -415,19 +425,29 @@
       fctl.writeUInt8 0, 32                                    # dispose mode
       fctl.writeUInt8 0, 33                                    # blend mode
       fctl.writeUInt32BE CRC32.buf(fctl.slice(4, fctl.length - 4).ua), 34
-      if !idx => return [idx, ihdr, iBuffer.concat(fctl, idat)]
-      length = idat.length + 4
+      if !idx => return [idx, ihdr, iBuffer.concat.apply(iBuffer, [fctl] ++ idats)]
+      # there might be multiple idat but it seems we could only have one fdat.
+      # anyway, merge the idats data directly.
+      data = iBuffer.concat.apply iBuffer, idats.map((idat) -> new iBuffer( idat.ua.slice(8, idat.ua.length - 4) ))
+      length = data.length + 4 + 12
       fdat = new iBuffer length
       fdat.writeUInt32BE length - 12, 0                       # length of chunk
-      fdat.write \fdAT, 4                                    # type of chunk
-      fdat.writeUInt32BE idx * 2, 8                          # sequence number
-      idat.copy fdat, 12, 8                                  # image data
+      fdat.write \fdAT, 4                                     # type of chunk
+      fdat.writeUInt32BE idx * 2, 8                           # sequence number
+      data.copy fdat, 12, 0
       fdat.writeUInt32BE CRC32.buf(fdat.slice(4, fdat.length - 4).ua), length - 4
       return [idx, ihdr, iBuffer.concat(fctl, fdat)]
+
 
   smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], delay = 0.033, loop-count = 0) ->
     Promise.resolve!
       .then ->
+        #[images, i8as] = [[], i8as.filter(->it.length)]
+        #for idx from 0 til i8as =>
+        #  ret = apngtool.animate-frame(new iBuffer(i8as[idx]), idx, delay)
+
+
+
         images = i8as.filter(->it.length).map (d,idx) ->
           apngtool.animate-frame(new iBuffer(d), idx, delay)
         signature = new iBuffer [137, 80, 78, 71, 13, 10, 26, 10]
@@ -442,20 +462,26 @@
         return iBuffer.concat.apply null, ([signature, ihdr, actl] ++ images.map(->it.2) ++ [iend])
       .then -> it.ua
 
-  smiltool.smil-to-apng-i8a = (node, param-option={}, smil2svgopt={}) ->
-    smiltool.smil-to-imgs node, param-option, smil2svgopt
-      .then (ret) ->
-        Promise.all(
-          ret.imgs.map ->
-            smiltool.url-to-dataurl it.src, it.img.width, it.img.height
-              .then -> smiltool.dataurl-to-i8a it
-        )
+  smiltool.imgs-to-apng-i8a = (data, param-option={}) ->
+    Promise.all(
+      data.imgs.map ->
+        smiltool.url-to-dataurl it.src, it.img.width, it.img.height
+          .then -> smiltool.dataurl-to-i8a it
+    )
       .then (i8as) ->
         option = {frames: 30, duration: 1}  <<< param-option
         if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
         if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
         delay = option.duration / option.frames
         smiltool.i8as-to-apng-i8a i8as, delay
+
+  smiltool.imgs-to-apng-blob = (data, param-option={}) ->
+    smiltool.imgs-to-apng-i8a data, param-option
+      .then (i8a) -> smiltool.i8a-to-blob i8a, "image/apng"
+
+  smiltool.smil-to-apng-i8a = (node, param-option={}, smil2svgopt={}) ->
+    smiltool.smil-to-imgs node, param-option, smil2svgopt
+      .then (ret) -> smiltool.imgs-to-apng-i8a ret, param-option
 
   smiltool.smil-to-apng-blob = (node, param-option={}, smil2svgopt={}) ->
     smiltool.smil-to-apng-i8a node, param-option, smil2svgopt
