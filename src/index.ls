@@ -31,12 +31,15 @@
       return path-from-list input
     return ""
 
+  image-cache = {}
   #TODO - all <img xlink:href=""/>, render after fetched
   fetch-image = (url, width, height) -> new Promise (res, rej) ->
     if /^data:/.exec(url) => return res url
+    if image-cache[url] => return res image-cache[url]
     img = new Image!
-    img <<< width: "#{width}px" if width
-    img <<< height: "#{height}px" if height
+    img.style <<<
+      width: "#{width}px" if width
+      height: "#{height}px" if height
     img.onload = ->
       [width,height] = [img.width, img.height]
       canvas = document.createElement \canvas
@@ -46,7 +49,9 @@
       ctx.fillStyle = 'rgba(255,255,255,0)'
       ctx.fillRect 0, 0, width, height
       ctx.drawImage img, 0, 0, width, height
-      res canvas.toDataURL!
+      ret = canvas.toDataURL!
+      image-cache[url] = ret
+      res res
     img.src = url
 
   _fetch-images = (node, hash = {}) ->
@@ -57,7 +62,7 @@
     if href and !/^#/.exec(href) =>
       width = node.getAttribute \width
       height = node.getAttribute \height
-      promises.push( fetch-image(href, width, height).then -> hash[href] = it )
+      promises.push( fetch-image(href, width, height, hash).then -> hash[href] = it )
     for i from 0 til node.childNodes.length =>
       child = node.childNodes[i]
       promises = promises.concat _fetch-images(child, hash)
@@ -301,6 +306,7 @@
         img.src = URL.createObjectURL blob
         res {gif: img, frames: data.imgs, blob: blob}
       for item in data.imgs => gif.addFrame item.img, item.option
+      gif.on \progress, (v) -> if option.progress => option.progress 100 * ( v * 0.5 + 0.5 )
       gif.render!
 
     smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) ->
@@ -316,7 +322,7 @@
         .then (blob) -> zip.file "frame-#i.png", blob
     Promise.all promises
       .then -> zip.generate-async type: \blob
-      .then -> return {blob: it, frames: ret.imgs}
+      .then -> return {blob: it, frames: data.imgs}
 
 
   smiltool.smil-to-pngs = (node, param-option={}, smil2svgopt={}) ->
@@ -333,7 +339,7 @@
     render = -> res handler
     _ = (t) ->
       p = 100 * t / option.duration <? 100
-      option.progress p
+      option.progress p * 0.5
       if t > option.duration => return render! #return gif.render!
       if param-option.step => param-option.step t
       (ret) <- smil-to-svg node, t, smil2svgopt .then
@@ -439,7 +445,7 @@
       return [idx, ihdr, iBuffer.concat(fctl, fdat)]
 
 
-  smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], delay = 0.033, loop-count = 0) ->
+  smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], delay = 0.033, repeat = 0) ->
     Promise.resolve!
       .then ->
         #[images, i8as] = [[], i8as.filter(->it.length)]
@@ -457,7 +463,7 @@
         actl.writeUInt32BE 8, 0                           # chunk length
         actl.write \acTL, 4                               # chunk type
         actl.writeUInt32BE images.length, 8               # frame count
-        actl.writeUInt32BE 0, 12                          # loop time ( 0 = inf )
+        actl.writeUInt32BE repeat, 12                     # loop time ( 0 = inf )
         actl.writeUInt32BE CRC32.buf(actl.slice(4, actl.length - 4).ua), 16
         return iBuffer.concat.apply null, ([signature, ihdr, actl] ++ images.map(->it.2) ++ [iend])
       .then -> it.ua
@@ -473,7 +479,7 @@
         if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
         if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
         delay = option.duration / option.frames
-        smiltool.i8as-to-apng-i8a i8as, delay
+        smiltool.i8as-to-apng-i8a i8as, delay, (param-options.repeat-count or 0)
 
   smiltool.imgs-to-apng-blob = (data, param-option={}) ->
     smiltool.imgs-to-apng-i8a data, param-option
