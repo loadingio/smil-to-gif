@@ -818,7 +818,7 @@ var slice$ = [].slice;
         option.frames = Math.ceil(option.duration / 0.1);
       }
       delay = option.duration / option.frames;
-      return smiltool.i8asToApngI8a(i8as, delay, paramOptions.repeatCount || 0);
+      return smiltool.i8asToApngI8a(i8as, delay, paramOption.repeatCount || 0);
     });
   };
   smiltool.imgsToApngBlob = function(data, paramOption){

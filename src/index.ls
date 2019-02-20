@@ -451,9 +451,6 @@
         #[images, i8as] = [[], i8as.filter(->it.length)]
         #for idx from 0 til i8as =>
         #  ret = apngtool.animate-frame(new iBuffer(i8as[idx]), idx, delay)
-
-
-
         images = i8as.filter(->it.length).map (d,idx) ->
           apngtool.animate-frame(new iBuffer(d), idx, delay)
         signature = new iBuffer [137, 80, 78, 71, 13, 10, 26, 10]
@@ -479,7 +476,7 @@
         if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
         if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
         delay = option.duration / option.frames
-        smiltool.i8as-to-apng-i8a i8as, delay, (param-options.repeat-count or 0)
+        smiltool.i8as-to-apng-i8a i8as, delay, (param-option.repeat-count or 0)
 
   smiltool.imgs-to-apng-blob = (data, param-option={}) ->
     smiltool.imgs-to-apng-i8a data, param-option
