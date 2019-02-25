@@ -1,8 +1,8 @@
 
-smil-to-gif
+smiltool
 =====================
 
-convert SVG with SMIL into static image frames and gif.
+SMIL+CSS+SVG -> static SVG -> IMGS -> APNG / PNG Sequence / GIF
 
 
 

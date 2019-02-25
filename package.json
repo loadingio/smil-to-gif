@@ -3,7 +3,7 @@
   "name": "smiltool",
   "description": "Toolkit for animated images",
   "version": "0.0.1",
-  "main": "dist/index.js",
+  "main": "dist/smiltool.js",
   "homepage": "https://github.com/loadingio/smil-to-gif",
   "license": "MIT",
   "repository": {
