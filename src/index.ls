@@ -473,6 +473,8 @@
     )
       .then (i8as) ->
         option = {frames: 30, duration: 1}  <<< param-option
+        # if we want to change frame counts, we should also adjust frames in i8as, which is kinda hard.
+        # so we temporarily disable this.
         #if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
         #if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
         delay = option.duration / option.frames
