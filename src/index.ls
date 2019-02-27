@@ -332,8 +332,8 @@
   smiltool.smil-to-imgs = (node, param-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
     imgs = []
     option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
-    if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
-    if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
+    #if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
+    #if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
 
     handler = {imgs: [], option}
     render = -> res handler

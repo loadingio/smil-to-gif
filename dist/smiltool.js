@@ -578,12 +578,6 @@ var slice$ = [].slice;
         duration: 1,
         progress: function(){}
       }, paramOption);
-      if (option.duration / option.frames < 0.034) {
-        option.frames = Math.floor(option.duration / 0.034);
-      }
-      if (option.duration / option.frames > 0.1) {
-        option.frames = Math.ceil(option.duration / 0.1);
-      }
       handler = {
         imgs: [],
         option: option
