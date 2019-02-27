@@ -811,12 +811,6 @@ var slice$ = [].slice;
         frames: 30,
         duration: 1
       }, paramOption);
-      if (option.duration / option.frames < 0.034) {
-        option.frames = Math.floor(option.duration / 0.034);
-      }
-      if (option.duration / option.frames > 0.1) {
-        option.frames = Math.ceil(option.duration / 0.1);
-      }
       delay = option.duration / option.frames;
       return smiltool.i8asToApngI8a(i8as, delay, paramOption.repeatCount || 0);
     });

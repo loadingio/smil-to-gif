@@ -473,8 +473,8 @@
     )
       .then (i8as) ->
         option = {frames: 30, duration: 1}  <<< param-option
-        if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
-        if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
+        #if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
+        #if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
         delay = option.duration / option.frames
         smiltool.i8as-to-apng-i8a i8as, delay, (param-option.repeat-count or 0)
 
