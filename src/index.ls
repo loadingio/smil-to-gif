@@ -116,6 +116,13 @@
 
     # track styles
     if option.css-animation or option.with-css =>
+      /* new method - 10x faster. Need to include all related classes */
+      for i from 0 til node.style.length => if !(node.style[i] in <[transform opacity]>) =>
+        styles.push [node.style[i], style[node.style[i]]]
+      styles.push [\transform, style.transform]
+      styles.push [\opacity, style.opacity]
+      /* old method */
+      /*
       for k,v of style =>
         attr = node.getAttribute(k)
         inline-style = node.getAttribute('style') or ''
@@ -124,6 +131,7 @@
           !(option.no-animation and /animation/.exec(k))
         ) =>
           styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
+      */
 
     if node.nodeName == \svg =>
       animatedProperties["xmlns"] = "http://www.w3.org/2000/svg"

@@ -186,7 +186,7 @@ var slice$ = [].slice;
     return dummy.defStyle;
   };
   traverse = function(node, delay, option){
-    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, k, v, attr, inlineStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
+    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, v, k, ret;
     delay == null && (delay = 1);
     option == null && (option = {});
     if (/^#text/.exec(node.nodeName)) {
@@ -198,14 +198,26 @@ var slice$ = [].slice;
     style = getComputedStyle(node);
     dummyStyle = getDummyStyle();
     if (option.cssAnimation || option.withCss) {
-      for (k in style) {
-        v = style[k];
-        attr = node.getAttribute(k);
-        inlineStyle = node.getAttribute('style') || '';
-        if (!(/^\d+$|^cssText$/.exec(k) || (dummyStyle[k] === v && !~inlineStyle.indexOf(k))) && !(option.noAnimation && /animation/.exec(k))) {
-          styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
+      /* new method - 10x faster. Need to include all related classes */
+      for (i$ = 0, to$ = node.style.length; i$ < to$; ++i$) {
+        i = i$;
+        if (!((ref$ = node.style[i]) === 'transform' || ref$ === 'opacity')) {
+          styles.push([node.style[i], style[node.style[i]]]);
         }
       }
+      styles.push(['transform', style.transform]);
+      styles.push(['opacity', style.opacity]);
+      /* old method */
+      /*
+      for k,v of style =>
+        attr = node.getAttribute(k)
+        inline-style = node.getAttribute('style') or ''
+        if (
+          !(/^\d+$|^cssText$/.exec(k) or (dummy-style[k] == v and !~inline-style.indexOf(k))) and
+          !(option.no-animation and /animation/.exec(k))
+        ) =>
+          styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
+      */
     }
     if (node.nodeName === 'svg') {
       animatedProperties["xmlns"] = "http://www.w3.org/2000/svg";
