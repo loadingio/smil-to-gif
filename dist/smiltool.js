@@ -186,7 +186,7 @@ var slice$ = [].slice;
     return dummy.defStyle;
   };
   traverse = function(node, delay, option){
-    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, v, k, ret;
+    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, k, v, attr, inlineStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
     delay == null && (delay = 1);
     option == null && (option = {});
     if (/^#text/.exec(node.nodeName)) {
@@ -198,26 +198,32 @@ var slice$ = [].slice;
     style = getComputedStyle(node);
     dummyStyle = getDummyStyle();
     if (option.cssAnimation || option.withCss) {
-      /* new method - 10x faster. Need to include all related classes */
-      for (i$ = 0, to$ = node.style.length; i$ < to$; ++i$) {
-        i = i$;
-        if (!((ref$ = node.style[i]) === 'transform' || ref$ === 'opacity')) {
-          styles.push([node.style[i], style[node.style[i]]]);
+      /* new method - 10x faster. Need to include all related classes. still has bugs in Safari */
+      /*
+      for i from 0 til node.style.length => if !(node.style[i] in <[transform opacity]>) =>
+        styles.push [node.style[i], style[node.style[i]]]
+      if style.transform and (style.transform != \none or !node.getAttribute("transform")) =>
+        styles.push [\transform, style.transform]
+      if style.opacity? => styles.push [\opacity, style.opacity]
+      */
+      /* old method */
+      /* list only attributes available directly in style. failed in some browsers
+      for i from 0 til node.style.length =>
+        k = node.style[i]
+        v = style[k]
+      */
+      isSvg = node.nodeName.toLowerCase() === 'svg';
+      for (k in style) {
+        v = style[k];
+        if (isSvg && (k === 'left' || k === 'right' || k === 'top' || k === 'bottom' || k === 'position')) {
+          continue;
+        }
+        attr = node.getAttribute(k);
+        inlineStyle = node.getAttribute('style') || '';
+        if (!(/^\d+$|^cssText$/.exec(k) || (dummyStyle[k] === v && !~inlineStyle.indexOf(k))) && !(option.noAnimation && /animation/.exec(k))) {
+          styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
         }
       }
-      styles.push(['transform', style.transform]);
-      styles.push(['opacity', style.opacity]);
-      /* old method */
-      /*
-      for k,v of style =>
-        attr = node.getAttribute(k)
-        inline-style = node.getAttribute('style') or ''
-        if (
-          !(/^\d+$|^cssText$/.exec(k) or (dummy-style[k] == v and !~inline-style.indexOf(k))) and
-          !(option.no-animation and /animation/.exec(k))
-        ) =>
-          styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
-      */
     }
     if (node.nodeName === 'svg') {
       animatedProperties["xmlns"] = "http://www.w3.org/2000/svg";
@@ -580,7 +586,7 @@ var slice$ = [].slice;
     paramOption == null && (paramOption = {});
     smil2svgopt == null && (smil2svgopt = {});
     return new Promise(function(res, rej){
-      var imgs, option, handler, render, _;
+      var imgs, option, handler, render, skip, _;
       imgs = [];
       option = import$({
         slow: 0,
@@ -597,6 +603,7 @@ var slice$ = [].slice;
       render = function(){
         return res(handler);
       };
+      skip = 0;
       _ = function(t){
         var p, ref$;
         p = (ref$ = 100 * t / option.duration) < 100 ? ref$ : 100;
@@ -613,19 +620,26 @@ var slice$ = [].slice;
           x$ = img.style;
           x$.width = option.width + "px";
           x$.height = option.height + "px";
-          img.src = "data:image/svg+xml;," + encodeURIComponent(ret);
-          delay = Math.round(option.duration * 1000 / option.frames);
-          handler.imgs.push({
-            img: img,
-            option: {
-              delay: delay
-            },
-            src: img.src
-          });
-          imgs.push(img);
-          return setTimeout(function(){
-            return _(t + option.duration / option.frames);
-          }, option.slow);
+          if (!skip) {
+            skip = 1;
+            return setTimeout(function(){
+              return _(t);
+            }, option.slow);
+          } else {
+            img.src = "data:image/svg+xml;," + encodeURIComponent(ret);
+            delay = Math.round(option.duration * 1000 / option.frames);
+            handler.imgs.push({
+              img: img,
+              option: {
+                delay: delay
+              },
+              src: img.src
+            });
+            imgs.push(img);
+            return setTimeout(function(){
+              return _(t + option.duration / option.frames);
+            }, option.slow);
+          }
         });
       };
       return setTimeout(function(){

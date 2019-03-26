@@ -116,14 +116,25 @@
 
     # track styles
     if option.css-animation or option.with-css =>
-      /* new method - 10x faster. Need to include all related classes */
+      # TODO finalize the css animation handling here.
+      /* new method - 10x faster. Need to include all related classes. still has bugs in Safari */
+      /*
       for i from 0 til node.style.length => if !(node.style[i] in <[transform opacity]>) =>
         styles.push [node.style[i], style[node.style[i]]]
-      styles.push [\transform, style.transform]
-      styles.push [\opacity, style.opacity]
+      if style.transform and (style.transform != \none or !node.getAttribute("transform")) =>
+        styles.push [\transform, style.transform]
+      if style.opacity? => styles.push [\opacity, style.opacity]
+      */
       /* old method */
-      /*
+      /* list only attributes available directly in style. failed in some browsers
+      for i from 0 til node.style.length =>
+        k = node.style[i]
+        v = style[k]
+      */
+      is-svg = node.nodeName.toLowerCase! == \svg
       for k,v of style =>
+        # we don't need position for svg node which cause problems
+        if is-svg and (k in <[left right top bottom position]>) => continue
         attr = node.getAttribute(k)
         inline-style = node.getAttribute('style') or ''
         if (
@@ -131,8 +142,6 @@
           !(option.no-animation and /animation/.exec(k))
         ) =>
           styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
-      */
-
     if node.nodeName == \svg =>
       animatedProperties["xmlns"] = "http://www.w3.org/2000/svg"
       animatedProperties["xmlns:xlink"] = "http://www.w3.org/1999/xlink"
@@ -345,6 +354,7 @@
 
     handler = {imgs: [], option}
     render = -> res handler
+    skip = 0 # skip the very first frame and repeat it again. can solve some glitch in browsers like Safari
     _ = (t) ->
       p = 100 * t / option.duration <? 100
       option.progress p * 0.5
@@ -355,11 +365,15 @@
       img.style
         ..width  = "#{option.width}px"
         ..height = "#{option.height}px"
-      img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
-      delay = Math.round(option.duration * 1000 / option.frames)
-      handler.imgs.push {img, option: {delay}, src: img.src}
-      imgs.push img
-      setTimeout (-> _ t + (option.duration / option.frames)), option.slow
+      if !skip =>
+        skip := 1
+        setTimeout (-> _ t ), option.slow
+      else
+        img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
+        delay = Math.round(option.duration * 1000 / option.frames)
+        handler.imgs.push {img, option: {delay}, src: img.src}
+        imgs.push img
+        setTimeout (-> _ t + (option.duration / option.frames)), option.slow
     setTimeout (-> _ 0), option.slow
 
   iBuffer = (input) ->
