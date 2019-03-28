@@ -186,43 +186,27 @@ var slice$ = [].slice;
     return dummy.defStyle;
   };
   traverse = function(node, delay, option){
-    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, k, v, attr, inlineStyle, i$, to$, i, child, dur, begin, path, length, ptr, name, value, len$, ret;
+    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, i$, to$, i, k, v, child, dur, begin, path, length, ptr, name, value, len$, ret;
     delay == null && (delay = 1);
     option == null && (option = {});
-    if (/^#text/.exec(node.nodeName)) {
-      return node.textContent;
-    } else if (/^#/.exec(node.nodeName)) {
-      return "";
+    if (node.nodeName[0] === '#') {
+      return node.nodeName === '#text' ? node.textContent : '';
     }
-    ref$ = [[], [], [], {}], attrs = ref$[0], styles = ref$[1], subtags = ref$[2], animatedProperties = ref$[3];
-    style = getComputedStyle(node);
+    ref$ = [[], [], [], {}, null], attrs = ref$[0], styles = ref$[1], subtags = ref$[2], animatedProperties = ref$[3], style = ref$[4];
     dummyStyle = getDummyStyle();
     if (option.cssAnimation || option.withCss) {
-      /* new method - 10x faster. Need to include all related classes. still has bugs in Safari */
-      /*
-      for i from 0 til node.style.length => if !(node.style[i] in <[transform opacity]>) =>
-        styles.push [node.style[i], style[node.style[i]]]
-      if style.transform and (style.transform != \none or !node.getAttribute("transform")) =>
-        styles.push [\transform, style.transform]
-      if style.opacity? => styles.push [\opacity, style.opacity]
-      */
-      /* old method */
-      /* list only attributes available directly in style. failed in some browsers
-      for i from 0 til node.style.length =>
-        k = node.style[i]
-        v = style[k]
-      */
       isSvg = node.nodeName.toLowerCase() === 'svg';
-      for (k in style) {
-        v = style[k];
+      for (i$ = 0, to$ = node.style.length; i$ < to$; ++i$) {
+        i = i$;
+        k = node.style[i];
+        v = node.style[k];
         if (isSvg && (k === 'left' || k === 'right' || k === 'top' || k === 'bottom' || k === 'position')) {
           continue;
         }
-        attr = node.getAttribute(k);
-        inlineStyle = node.getAttribute('style') || '';
-        if (!(/^\d+$|^cssText$/.exec(k) || (dummyStyle[k] === v && !~inlineStyle.indexOf(k))) && !(option.noAnimation && /animation/.exec(k))) {
-          styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
+        if (k.indexOf('webkit') === 0 || k === 'cssText' || !isNaN(k) || dummyStyle[k] === v || (option.noAnimation && k.indexOf('animation') === 0)) {
+          continue;
         }
+        styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
       }
     }
     if (node.nodeName === 'svg') {
@@ -232,18 +216,21 @@ var slice$ = [].slice;
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
       child = node.childNodes[i];
-      if (/^animate/.exec(child.nodeName) && option.noAnimation) {
+      if (option.noAnimation && child.nodeName.indexOf('animate') === 0) {
         continue;
       }
-      if (/^animateMotion/.exec(child.nodeName)) {
+      if (child.nodeName.indexOf('animateMotion') === 0) {
         dur = child.getSimpleDuration();
         begin = +child.getAttribute("begin").replace("s", "");
         path = document.querySelector(child.querySelector("mpath").getAttributeNS("http://www.w3.org/1999/xlink", "href"));
         length = path.getTotalLength();
         ptr = path.getPointAtLength(length * ((child.getCurrentTime() - begin) % dur) / dur);
         animatedProperties["transform"] = "translate(" + ptr.x + " " + ptr.y + ")";
-      } else if (/^animate/.exec(child.nodeName)) {
+      } else if (child.nodeName.indexOf('animate') === 0) {
         name = child.getAttribute('attributeName');
+        if (!style) {
+          style = getComputedStyle(node);
+        }
         value = node[name] || style.getPropertyValue(name);
         if (name === 'd') {
           value = node.animatedPathSegList || node.getAttribute('d');
