@@ -150,6 +150,8 @@ var slice$ = [].slice;
     }
     node.style["animation-play-state"] = "running";
     node.style["animation-delay"] = (node._delay || 0) + "s";
+    delete node._delay;
+    delete node._dur;
     for (i$ = 0, to$ = node.childNodes.length; i$ < to$; ++i$) {
       i = i$;
       results$.push(restoreAnimation(node.childNodes[i]));

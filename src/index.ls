@@ -87,6 +87,8 @@
     else if /^#/.exec(node.nodeName) => return ""
     node.style["animation-play-state"] = "running"
     node.style["animation-delay"] = "#{node._delay or 0}s"
+    delete node._delay
+    delete node._dur
     for i from 0 til node.childNodes.length => restore-animation node.childNodes[i]
 
   prepare = (node, delay, option = {}) ->
