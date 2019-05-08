@@ -111,16 +111,17 @@
     if node.nodeName.0 == \# => return if node.nodeName == \#text => node.textContent else ''
     [attrs,styles,subtags,animatedProperties,style] = [[],[],[],{},null]
     dummy-style = get-dummy-style!
+    style = getComputedStyle(node)
 
     # track styles
     if option.css-animation or option.with-css =>
       is-svg = node.nodeName.toLowerCase! == \svg
-      for i from 0 til node.style.length =>
-        k = node.style[i]
+      list = [node.style[i] for i from 0 til node.style.length] ++ <[transform opacity]>
+      for k in list =>
         # if safari, transform-origin are broken into x, y, z.
         # but there is only "transform-origin" in computedStyle.
         # thus, we don't use computedStyle here, instead use node.style directly.
-        v = node.style[k]
+        v = style[k] or node.style[k]
         # we don't need position for svg node which cause problems
         if is-svg and (k in <[left right top bottom position]>) => continue
 
@@ -149,7 +150,6 @@
         animatedProperties["transform"] = "translate(#{ptr.x} #{ptr.y})"
       else if child.nodeName.indexOf(\animate) == 0 =>
         name = child.getAttribute \attributeName
-        if !style => style = getComputedStyle(node)
         value = node[name] or style.getPropertyValue(name)
         if name == \d => value = (node.animatedPathSegList or node.getAttribute(\d))
         animatedProperties[name] = anim-to-string(value)

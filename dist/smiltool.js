@@ -186,7 +186,7 @@ var slice$ = [].slice;
     return dummy.defStyle;
   };
   traverse = function(node, delay, option){
-    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, i$, to$, i, k, v, child, dur, begin, path, length, ptr, name, value, len$, ret;
+    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, list, i, i$, len$, k, v, to$, child, dur, begin, path, length, ptr, name, value, ret;
     delay == null && (delay = 1);
     option == null && (option = {});
     if (node.nodeName[0] === '#') {
@@ -194,12 +194,20 @@ var slice$ = [].slice;
     }
     ref$ = [[], [], [], {}, null], attrs = ref$[0], styles = ref$[1], subtags = ref$[2], animatedProperties = ref$[3], style = ref$[4];
     dummyStyle = getDummyStyle();
+    style = getComputedStyle(node);
     if (option.cssAnimation || option.withCss) {
       isSvg = node.nodeName.toLowerCase() === 'svg';
-      for (i$ = 0, to$ = node.style.length; i$ < to$; ++i$) {
-        i = i$;
-        k = node.style[i];
-        v = node.style[k];
+      list = (function(){
+        var i$, to$, results$ = [];
+        for (i$ = 0, to$ = node.style.length; i$ < to$; ++i$) {
+          i = i$;
+          results$.push(node.style[i]);
+        }
+        return results$;
+      }()).concat(['transform', 'opacity']);
+      for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+        k = list[i$];
+        v = style[k] || node.style[k];
         if (isSvg && (k === 'left' || k === 'right' || k === 'top' || k === 'bottom' || k === 'position')) {
           continue;
         }
@@ -228,9 +236,6 @@ var slice$ = [].slice;
         animatedProperties["transform"] = "translate(" + ptr.x + " " + ptr.y + ")";
       } else if (child.nodeName.indexOf('animate') === 0) {
         name = child.getAttribute('attributeName');
-        if (!style) {
-          style = getComputedStyle(node);
-        }
         value = node[name] || style.getPropertyValue(name);
         if (name === 'd') {
           value = node.animatedPathSegList || node.getAttribute('d');
