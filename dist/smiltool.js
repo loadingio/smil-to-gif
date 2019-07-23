@@ -323,7 +323,7 @@ var slice$ = [].slice;
           ret = traverse(root, delay, import$({
             hrefs: hash
           }, option));
-          if (option.cssAnimation) {
+          if (option.cssAnimation && !option.keepPaused) {
             restoreAnimation(root);
           }
           root.unpauseAnimations();
@@ -580,7 +580,7 @@ var slice$ = [].slice;
     paramOption == null && (paramOption = {});
     smil2svgopt == null && (smil2svgopt = {});
     return new Promise(function(res, rej){
-      var imgs, option, handler, render, skip, _;
+      var imgs, option, smil2svgoptLocal, ref$, handler, render, skip, _;
       imgs = [];
       option = import$({
         slow: 0,
@@ -590,6 +590,7 @@ var slice$ = [].slice;
         duration: 1,
         progress: function(){}
       }, paramOption);
+      smil2svgoptLocal = (ref$ = import$({}, smil2svgopt), ref$.keepPaused = true, ref$);
       handler = {
         imgs: [],
         option: option
@@ -603,12 +604,15 @@ var slice$ = [].slice;
         p = (ref$ = 100 * t / option.duration) < 100 ? ref$ : 100;
         option.progress(p * 0.5);
         if (t > option.duration) {
-          return render();
+          smilToSvg(node, t, smil2svgopt).then(function(){
+            return render();
+          });
+          return;
         }
         if (paramOption.step) {
           paramOption.step(t);
         }
-        return smilToSvg(node, t, smil2svgopt).then(function(ret){
+        return smilToSvg(node, t, smil2svgoptLocal).then(function(ret){
           var img, x$, delay;
           img = new Image();
           x$ = img.style;

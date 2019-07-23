@@ -196,7 +196,7 @@
         <- fetch-images(root, hash).then
         if option.css-animation => prepare root, delay, option
         ret = traverse root, delay, {hrefs: hash} <<< option
-        if option.css-animation => restore-animation root
+        if option.css-animation and !option.keep-paused => restore-animation root
         root.unpauseAnimations!
         res """<?xml version="1.0" encoding="utf-8"?>#ret"""
       if option.force-redraw => requestAnimationFrame(-> _ it) else _!
@@ -345,15 +345,21 @@
     #if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
     #if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
 
+    # kee animation paused in the generation loop so Safari works well without timing issue.
+    smil2svgopt-local = {} <<< smil2svgopt <<< {keep-paused: true}
+
     handler = {imgs: [], option}
     render = -> res handler
     skip = 0 # skip the very first frame and repeat it again. can solve some glitch in browsers like Safari
     _ = (t) ->
       p = 100 * t / option.duration <? 100
       option.progress p * 0.5
-      if t > option.duration => return render! #return gif.render!
+      if t > option.duration =>
+        # call smil-to-svg one more time without keep-paused to resume animation
+        smil-to-svg node, t, smil2svgopt .then -> return render! #return gif.render!
+        return
       if param-option.step => param-option.step t
-      (ret) <- smil-to-svg node, t, smil2svgopt .then
+      (ret) <- smil-to-svg node, t, smil2svgopt-local .then
       img = new Image!
       img.style
         ..width  = "#{option.width}px"
