@@ -162,11 +162,13 @@ var slice$ = [].slice;
     var ref$, p, n;
     option == null && (option = {});
     ref$ = [node.parentNode, node.nextSibling], p = ref$[0], n = ref$[1];
-    p.removeChild(node);
-    if (n) {
-      p.insertBefore(node, n);
-    } else {
-      p.appendChild(node);
+    if (p) {
+      p.removeChild(node);
+      if (n) {
+        p.insertBefore(node, n);
+      } else {
+        p.appendChild(node);
+      }
     }
     if (node.pauseAnimations != null) {
       node.pauseAnimations();
@@ -305,6 +307,30 @@ var slice$ = [].slice;
     return ret;
   };
   smiltool = module.smiltool = {};
+  smiltool.svgStatify = function(root){
+    var _;
+    _ = function(n){
+      var nodeName, style, i$, ref$, len$, c, results$ = [];
+      if (n.nodeType !== 1) {
+        return;
+      }
+      nodeName = n.nodeName.toLowerCase();
+      if (/^animate/.exec(nodeName) && n.parentNode) {
+        return n.parentNode.removeChild(n);
+      }
+      style = window.getComputedStyle(n);
+      if (style["animation"]) {
+        style.animation = "none";
+      }
+      for (i$ = 0, len$ = (ref$ = n.childNodes).length; i$ < len$; ++i$) {
+        c = ref$[i$];
+        results$.push(_(c));
+      }
+      return results$;
+    };
+    _(root);
+    return root;
+  };
   smiltool.smilToSvg = smilToSvg = function(root, delay, option){
     option == null && (option = {});
     return new Promise(function(res, rej){

@@ -94,8 +94,9 @@
   prepare = (node, delay, option = {}) ->
     # reset animation so we can get precisely the value with delay
     [p,n] = [node.parentNode, node.nextSibling]
-    p.removeChild node
-    if n => p.insertBefore(node, n) else p.appendChild node
+    if p =>
+      p.removeChild node
+      if n => p.insertBefore(node, n) else p.appendChild node
     if node.pauseAnimations? =>
       node.pauseAnimations!
       if delay? => node.setCurrentTime delay
@@ -184,6 +185,17 @@
   ###### interface ######
 
   smiltool = module.smiltool = {}
+
+  smiltool.svg-statify = (root) ->
+    _ = (n) ->
+      if n.nodeType != 1 => return
+      nodeName = n.nodeName.toLowerCase!
+      if /^animate/.exec(nodeName) and n.parentNode => return n.parentNode.removeChild n
+      style = window.getComputedStyle(n)
+      if style["animation"] => style.animation = "none"
+      for c in n.childNodes => _ c
+    _ root
+    return root
 
   smiltool.smil-to-svg = smil-to-svg = (root, delay, option = {}) ->
     new Promise (res, rej) ->
