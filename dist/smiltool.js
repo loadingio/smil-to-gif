@@ -354,7 +354,7 @@ var slice$ = [].slice;
           }
           root.unpauseAnimations();
           return res("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + ret);
-        });
+        })['catch'](rej);
       };
       if (option.forceRedraw) {
         return requestAnimationFrame(function(it){
@@ -470,8 +470,10 @@ var slice$ = [].slice;
   smiltool.smilToBlob = svgToBlob = function(svg, delay, type, option){
     type == null && (type = 'image/png');
     return smilToSvg(root, delay, option).then(function(svg){
-      svgToDataurl(svg).then(function(url){});
-      dataurlToI8a(url).then(function(i8a){});
+      return svgToDataurl(svg);
+    }).then(function(url){
+      return dataurlToI8a(url);
+    }).then(function(i8a){
       return i8aToBlob(i8a, type);
     });
   };
@@ -516,7 +518,7 @@ var slice$ = [].slice;
         dataurl = canvas.toDataURL(type, quality);
         return dataurlToArraybuffer(dataurl).then(function(ab){
           return res(ab);
-        });
+        })['catch'](rej);
       };
       return img.src = url;
     });
@@ -632,7 +634,7 @@ var slice$ = [].slice;
         if (t > option.duration) {
           smilToSvg(node, t, smil2svgopt).then(function(){
             return render();
-          });
+          })['catch'](rej);
           return;
         }
         if (paramOption.step) {
@@ -664,7 +666,7 @@ var slice$ = [].slice;
               return _(t + option.duration / option.frames);
             }, option.slow);
           }
-        });
+        })['catch'](rej);
       };
       return setTimeout(function(){
         return _(0);

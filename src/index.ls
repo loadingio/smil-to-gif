@@ -205,12 +205,13 @@
       # redraw needs a break and takes time, and setTimeout takes 0.3s in firefox.
       # here we use an option to turn it on, and use requestAnimationFrame for optimization
       _ = ->
-        <- fetch-images(root, hash).then
-        if option.css-animation => prepare root, delay, option
-        ret = traverse root, delay, {hrefs: hash} <<< option
-        if option.css-animation and !option.keep-paused => restore-animation root
-        root.unpauseAnimations!
-        res """<?xml version="1.0" encoding="utf-8"?>#ret"""
+        fetch-images(root, hash).then ->
+          if option.css-animation => prepare root, delay, option
+          ret = traverse root, delay, {hrefs: hash} <<< option
+          if option.css-animation and !option.keep-paused => restore-animation root
+          root.unpauseAnimations!
+          res """<?xml version="1.0" encoding="utf-8"?>#ret"""
+        .catch rej
       if option.force-redraw => requestAnimationFrame(-> _ it) else _!
 
   smiltool.svg-to-dataurl = svg-to-dataurl = (svg) -> new Promise (res, rej) ->
@@ -278,10 +279,10 @@
       .then (i8a) -> i8a-to-blob i8a, type
 
   smiltool.smil-to-blob = svg-to-blob = (svg, delay, type = \image/png, option) ->
-    smil-to-svg root, delay, option .then (svg) ->
-      svg-to-dataurl svg .then (url) ->
-      dataurl-to-i8a url .then (i8a) ->
-      i8a-to-blob i8a, type
+    smil-to-svg root, delay, option
+      .then (svg) -> svg-to-dataurl svg
+      .then (url) -> dataurl-to-i8a url
+      .then (i8a) -> i8a-to-blob i8a, type
 
   smiltool.dataurl-to-arraybuffer = dataurl-to-arraybuffer = (dataurl) -> new Promise (res, rej) ->
     splitted = dataurl.split \,
@@ -315,7 +316,9 @@
           img.width, img.height
         )
         dataurl = canvas.toDataURL(type, quality)
-        dataurl-to-arraybuffer dataurl .then (ab) -> res ab
+        dataurl-to-arraybuffer dataurl
+          .then (ab) -> res ab
+          .catch rej
       img.src = url
 
   if GIF? =>
@@ -368,23 +371,28 @@
       option.progress p * 0.5
       if t > option.duration =>
         # call smil-to-svg one more time without keep-paused to resume animation
-        smil-to-svg node, t, smil2svgopt .then -> return render! #return gif.render!
+        smil-to-svg node, t, smil2svgopt
+          .then -> return render! #return gif.render!
+          .catch rej
         return
       if param-option.step => param-option.step t
-      (ret) <- smil-to-svg node, t, smil2svgopt-local .then
-      img = new Image!
-      img.style
-        ..width  = "#{option.width}px"
-        ..height = "#{option.height}px"
-      if !skip =>
-        skip := 1
-        setTimeout (-> _ t ), option.slow
-      else
-        img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
-        delay = Math.round(option.duration * 1000 / option.frames)
-        handler.imgs.push {img, option: {delay}, src: img.src}
-        imgs.push img
-        setTimeout (-> _ t + (option.duration / option.frames)), option.slow
+
+      smil-to-svg node, t, smil2svgopt-local
+        .then (ret) ->
+          img = new Image!
+          img.style
+            ..width  = "#{option.width}px"
+            ..height = "#{option.height}px"
+          if !skip =>
+            skip := 1
+            setTimeout (-> _ t ), option.slow
+          else
+            img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
+            delay = Math.round(option.duration * 1000 / option.frames)
+            handler.imgs.push {img, option: {delay}, src: img.src}
+            imgs.push img
+            setTimeout (-> _ t + (option.duration / option.frames)), option.slow
+        .catch rej
     setTimeout (-> _ 0), option.slow
 
   iBuffer = (input) ->
