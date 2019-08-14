@@ -176,8 +176,7 @@ var slice$ = [].slice;
         node.setCurrentTime(delay);
       }
     }
-    freezeTraverse(node, option, delay);
-    return traverse(node, option);
+    return freezeTraverse(node, option, delay);
   };
   dummy = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   getDummyStyle = function(){

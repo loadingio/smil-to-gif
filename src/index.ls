@@ -101,7 +101,8 @@
       node.pauseAnimations!
       if delay? => node.setCurrentTime delay
     freeze-traverse node, option, delay
-    traverse node, option
+    # seems redundant TBD
+    #traverse node, delay, option
 
   dummy = document.createElementNS("http://www.w3.org/2000/svg", "circle")
   get-dummy-style = ->
