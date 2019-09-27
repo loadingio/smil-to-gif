@@ -1,0 +1,140 @@
+//- module
+
+//- Palette Widget in Palette List
+mixin palette(palette)
+  - if(!palette) palette = [[],""]
+  .palette
+    .colors
+      each color in palette[1]
+        .color(style="background:" + color)
+      .ctrl
+        .btn.btn-sm
+          i.i-check
+          .desc USE
+        .btn.btn-sm(data-action="edit")
+          i.i-gear
+          .desc EDIT
+    .name= palette[0]
+
+//- Palette Editor
+mixin paletteEditor
+  .ldpal
+    .name
+    .colors
+  .edit
+    .inner
+      .row
+        .col-sm-6
+          .ldColorPicker.no-border.no-palette
+        .col-sm-6
+          .row.mb-2
+            .col-sm-8
+              select.form-control.form-control-sm(value="rgb")
+                option(value="rgb") RGB
+                option(value="hsl") HSL
+                option(value="hcl") HCL
+            .col-sm-4.pl-0: input.form-control.form-control-sm.value(placeholder="Hex Value",data-tag="hex",style="margin:0")
+          - var configs = [["Red", "Green", "Blue", "rgb", "active"], ["Hue", "Saturation", "Luminance", "hsl",""], ["Hue", "Chroma", "Luminance", "hcl",""]];
+          each config in configs
+            .row.config(data-tag=config[3],class=config[4])
+              .col-sm-8
+                .label-group: span= config[0]
+                input.ldrs(
+                data-tag=config[3] + "-" + config[0][0].toLowerCase())
+                .label-group: span= config[1]
+                input.ldrs(
+                data-tag=config[3] + "-" + config[1][0].toLowerCase())
+                .label-group: span= config[2]
+                input.ldrs(
+                data-tag=config[3] + "-" + config[2][0].toLowerCase())
+              .col-sm-4
+                input.value.form-control.form-control-sm(
+                data-tag=config[3] + "-" + config[0][0].toLowerCase())
+                input.value.form-control.form-control-sm(
+                data-tag=config[3] + "-" + config[1][0].toLowerCase())
+                input.value.form-control.form-control-sm(
+                data-tag=config[3] + "-" + config[2][0].toLowerCase())
+
+//- Palette Picker Widget
+mixin ldPalettePicker
+  .ldpp(ldPalettePicker)
+    .navbar.text-center: .inner(data-tag="menu")
+      ul.nav.nav-pills.float-right
+        .nav-item: a.nav-link.active(data-panel="view") View
+        .nav-item: a.nav-link(data-panel="mypal") My Pals
+        .nav-item: a.nav-link(data-panel="edit") Edit
+      div.nav.nav-pills
+        .input-group
+          input.form-control(placeholder="Search...",data-tag="search")
+          .input-group-append.dropdown
+              .btn.btn-outline-dark.dropdown-toggle(data-toggle="dropdown") Filter
+              .dropdown-menu(data-tag="categories")
+                a.dropdown-item(href="#",data-cat="") All
+                .dropdown-divider
+                a.dropdown-item(href="#",data-cat="artwork") Artwork
+                a.dropdown-item(href="#",data-cat="brand") Brand
+                a.dropdown-item(href="#",data-cat="concept") Concept
+                .dropdown-divider
+                a.dropdown-item(href="#",data-cat="gradient") Gradient
+                a.dropdown-item(href="#",data-cat="qualitative") Qualitative
+                a.dropdown-item(href="#",data-cat="diverging") Diverging
+                a.dropdown-item(href="#",data-cat="colorbrew") Colorbrew
+    .panels
+      .panel.active.clusterize-scroll(data-panel="view",style="max-height:600px"): .inner.clusterize-content
+      .panel.clusterize-scroll(data-panel="mypal",style="max-height:600px")
+        .inner.clusterize-content
+        .btn.btn-primary.btn-block.ld-over-inverse.btn-load
+          | Load More
+          .ld.ldld.ldbtn.sm
+      .panel(data-panel="edit")
+        +paletteEditor
+        .foot
+          hr
+          .float-right
+            .btn.btn-primary.mr-2(data-action="use") Use This Palette
+            .btn.btn-outline-secondary.ld-ext-right(data-action="save") Save as Asset #[.ld.ldld.ldbtn.sm]
+          .btn.btn-outline-secondary(data-action="undo") Undo #[i.i-undo]
+mixin ldCover
+  .ldcv: .base: .inner
+    block
+//- module
+- var anikit = {"groupName":["No Animation","Popular Animation","Repeat Animation","Transition"],"members":[["static"],["blink","bounce-out","bounce-in","bounce","fade","float-btt-in","breath","slide-ltr","flip-h","spin","tremble"],["blink","blur","beat","bounceAlt","pulse","tick-alt","jump","bounce-out-alt","bounce-in-alt","bounce","clock","fade","float","heartbeat","hit","move-ltr","move-rtl","move-ttb","move-btt","orbit","breath","dim","metronome","swing","wander-v","wander","jingle","rubber-v","rubber","shake-v","shake","tick","smash","jelly-alt","jelly","damage","rush-btt","rush-ttb","rush-rtl","rush-ltr","slide-ltr","slide-rtl","slide-btt","slide-ttb","coin-h","coin-v","cycle","flip-h","flip-v","spin-fast","spin","squeeze","surprise","measure","shiver","swim","tremble","wrench"],["blur-in","blur-out","bounce-out","bounce-in","spring-ltr-in","spring-rtl-in","spring-ttb-in","spring-btt-in","throw-ltr-in","throw-rtl-in","throw-ttb-in","throw-btt-in","jump-alt-in","jump-alt-out","jump-in","jump-out","zoom-in","zoom-out","fade-in","fade-out","grow-rtl-in","grow-rtl-out","grow-ltr-in","grow-ltr-out","grow-ttb-in","grow-ttb-out","grow-btt-in","grow-btt-out","flip-v-in","flip-v-out","flip-h-in","flip-h-out","slide-rtl-in","slide-rtl-out","slide-ltr-in","slide-ltr-out","slide-ttb-in","slide-ttb-out","slide-btt-in","slide-btt-out","float-rtl-in","float-rtl-out","float-ltr-in","float-ltr-out","float-ttb-in","float-ttb-out","float-btt-in","float-btt-out","fall-rtl-in","fall-ltr-in","fall-ttb-in","fall-btt-in","power-off","power-on","rush-btt-in","rush-ttb-in","rush-ltr-in","rush-rtl-in","vortex-out","vortex-in","vortex-alt-out","vortex-alt-in"]]};
+
+mixin anikit-dropdown
+  .dropdown
+    .btn.btn-outline-dark.dropdown-toggle(data-toggle="dropdown") Animations...
+    .dropdown-menu
+      .inner: +anikit-dropdown-menu
+
+mixin anikit-dropdown-menu
+  each n,i in anikit.groupName
+    h6.dropdown-header.head #{n}
+    each k in anikit.members[i]
+      a.dropdown-item.anikit(href="#",data-anikit=k) #[span= k] #[.demo: .inner: .ld(class="ld-" + k)]
+    if i < 3
+      .dropdown-divider
+
+mixin anikit-modal
+  .ldcv.default-size: .base(style="position:relative")
+    .inner
+      .closebtn.lg(data-ldcv-set)
+      +anikit-modal-content
+
+mixin anikit-modal-content
+  each n,i in anikit.groupName
+    h6.ml-4.mt-4.head #{n}
+    .anikits
+      each k in anikit.members[i]
+        .anikit(data-ldcv-set=k,data-anikit=k)
+          .demo: .inner: .ld(class="ld-" + k)
+          span= k
+    .dropdown-divider
+  if i < 3
+    hr
+
+mixin anikit-select-options
+  each n,i in anikit.groupName
+    optgroup(label=n)
+      each k in anikit.members[i]
+        option(value=k)= k
+

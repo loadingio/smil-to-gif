@@ -1,0 +1,28 @@
+doctype html
+include ../../static/assets/lib/pug/ldui.pug
+html
+  head
+    link(href="https://fonts.googleapis.com/css?family=Oxygen:300,700|Roboto:300,500,700|BenchNine|Varela+Round&display=swap", rel="stylesheet")
+    +css("assets/lib/ldui.min.css")
+    +css("assets/lib/bootstrap.min.css")
+    +css("css/index.css")
+  body
+    .w-1200.rwd.mx-auto.text-center.my-4.p-4.typeset.heading-contrast
+      h2 SVG
+      #block-svg.p-4
+      h2 PNG
+      #block-png.p-4
+      h2 JPG
+      #block-jpg.p-4
+      h2 GIF
+      #block-gif.p-4
+      h2 SVG to PNG
+      #block-svg-png.p-4
+      h2 SVG to JPG
+      #block-svg-jpg.p-4
+      h2 SVG to WEBP
+      #block-svg-webp.p-4
+
+    +script("assets/lib/ldui.min.js")
+    +script("assets/lib/ldlz.min.js")
+    +script("js/index.js")

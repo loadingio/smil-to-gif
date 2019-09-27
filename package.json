@@ -15,13 +15,14 @@
     "npm": ">=1.2.2"
   },
   "scripts": {
-    "start": "node_modules/.bin/lsc web/server.ls"
+    "start": "cd web; ../node_modules/.bin/lsc ../node_modules/template/server.ls"
   },
   "devDependencies": {
     "LiveScript": ">=1.2.0",
     "browserify": "^16.2.3",
     "fs-extra": "^7.0.1",
-    "uglify-js": "^3.2.0"
+    "uglify-js": "^3.2.0",
+    "template": "github:zbryikt/template#v2"
   },
   "dependencies": {}
 }
