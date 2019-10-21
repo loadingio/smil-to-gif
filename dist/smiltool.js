@@ -374,7 +374,7 @@ var slice$ = [].slice;
       return svgToDataurl(svg);
     });
   };
-  smiltool.urlToDataurl = urlToDataurl = function(url, width, height, type, quality){
+  smiltool.urlToDataurl = urlToDataurl = function(url, width, height, type, quality, opt){
     width == null && (width = 100);
     height == null && (height = 100);
     type == null && (type = "image/png");
@@ -383,12 +383,26 @@ var slice$ = [].slice;
       var img;
       img = new Image();
       img.onload = function(){
-        var canvas, ctx;
+        var canvas, ctx, r, g, b, imgData, d, i$, to$, i;
         canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
+        if (opt && opt.transparent) {
+          r = opt.transparent >> 16;
+          g = (opt.transparent >> 8) % 256;
+          b = opt.transparent % 256;
+          imgData = ctx.getImageData(0, 0, width, height);
+          d = imgData.data;
+          for (i$ = 0, to$ = d.length; i$ < to$; i$ += 4) {
+            i = i$;
+            if (d[i] === r && d[i + 1] === g && d[i + 2] === b) {
+              d[i + 3] = 0;
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        }
         return res(canvas.toDataURL(type, quality));
       };
       return img.src = url;
@@ -401,7 +415,7 @@ var slice$ = [].slice;
     type == null && (type = "image/png");
     quality == null && (quality = 0.92);
     return smilToDataurl(root, delay, option).then(function(dataurl){
-      return urlToDataurl(dataurl, width, height, type, quality);
+      return urlToDataurl(dataurl, width, height, type, quality, option);
     });
   };
   smiltool.smilToPng = smilToPng = function(root, width, height, delay, quality, option){
@@ -579,7 +593,7 @@ var slice$ = [].slice;
     }, paramOption);
     zip = new JSZip();
     promises = data.imgs.map(function(d, i){
-      return urlToDataurl(data.imgs[i].src, option.width, option.height).then(function(it){
+      return urlToDataurl(data.imgs[i].src, option.width, option.height, 'image/png', 0.92, paramOption).then(function(it){
         return dataurlToBlob(it);
       }).then(function(blob){
         return zip.file("frame-" + i + ".png", blob);
@@ -847,7 +861,7 @@ var slice$ = [].slice;
   smiltool.imgsToApngI8a = function(data, paramOption){
     paramOption == null && (paramOption = {});
     return Promise.all(data.imgs.map(function(it){
-      return smiltool.urlToDataurl(it.src, it.img.width, it.img.height).then(function(it){
+      return smiltool.urlToDataurl(it.src, it.img.width, it.img.height, 'image/png', 0.92, paramOption).then(function(it){
         return smiltool.dataurlToI8a(it);
       });
     })).then(function(i8as){

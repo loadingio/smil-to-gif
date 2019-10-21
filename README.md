@@ -23,6 +23,7 @@ SMIL+CSS+SVG -> static SVG -> IMGS -> APNG / PNG Sequence / GIF
      - repeat-count
      - progress: (->)
      - step ( deprecated? replaced by progress? )
+     - transparent ( e.g., 0x00ff00 or null ) # only used in gif earlier but it should be a global option
 
  * smil to svg option
    * used in
@@ -44,7 +45,7 @@ SMIL+CSS+SVG -> static SVG -> IMGS -> APNG / PNG Sequence / GIF
      - smil-to-gif ( passed to imgs-to-gif )
      - imgs-to-gif ( passed to gif.js )
    * members:
-     - transparent ( e.g., 0x00ff00 or null )
+     - transparent ( e.g., 0x00ff00 or null ) # this is an defined option in gif but we set it from geneal option
      - background ( e.g., #fff )
      - dither
      - debug

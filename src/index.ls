@@ -222,7 +222,7 @@
   smiltool.smil-to-dataurl = smil-to-dataurl = (root, delay, option) ->
     smil-to-svg root, delay, option .then (svg) -> svg-to-dataurl svg
 
-  smiltool.url-to-dataurl = url-to-dataurl = (url, width = 100, height = 100, type = "image/png", quality = 0.92) ->
+  smiltool.url-to-dataurl = url-to-dataurl = (url, width = 100, height = 100, type = "image/png", quality = 0.92, opt) ->
     new Promise (res, rej) ->
       img = new Image!
       img.onload = ->
@@ -231,13 +231,23 @@
         canvas.height = height
         ctx = canvas.getContext \2d
         ctx.drawImage img, 0, 0, width, height
+        if opt and opt.transparent =>
+          r = (opt.transparent .>>. 16)
+          g = (opt.transparent .>>. 8) % 256
+          b = (opt.transparent  % 256)
+          img-data = ctx.getImageData(0,0,width,height)
+          d = img-data.data
+          for i from 0 til d.length by 4 =>
+            if d[i] == r and d[i + 1] == g and d[i + 2] == b => d[i + 3] = 0
+          ctx.putImageData img-data,0, 0
+
         res canvas.toDataURL(type, quality)
       img.src = url
   #deprecated. use url-to-dataurl instead
   smiltool.dataurl-to-img = url-to-dataurl
 
   smiltool.smil-to-img = smil-to-img = (root, width=100, height=100, delay, type="image/png", quality=0.92, option) ->
-    smil-to-dataurl root, delay, option .then (dataurl) -> url-to-dataurl dataurl, width, height, type, quality
+    smil-to-dataurl root, delay, option .then (dataurl) -> url-to-dataurl dataurl, width, height, type, quality, option
 
   smiltool.smil-to-png = smil-to-png = (root, width = 100, height = 100, delay, quality = 0.92, option) ->
     smil-to-img root, width, height, delay, "image/png", quality, option
@@ -343,7 +353,7 @@
     option = {width: 100, height: 100} <<< param-option
     zip = new JSZip!
     promises = data.imgs.map (d,i) ->
-      url-to-dataurl data.imgs[i].src, option.width, option.height
+      url-to-dataurl data.imgs[i].src, option.width, option.height, \image/png, 0.92, param-option
         .then -> dataurl-to-blob it
         .then (blob) -> zip.file "frame-#i.png", blob
     Promise.all promises
@@ -510,7 +520,7 @@
   smiltool.imgs-to-apng-i8a = (data, param-option={}) ->
     Promise.all(
       data.imgs.map ->
-        smiltool.url-to-dataurl it.src, it.img.width, it.img.height
+        smiltool.url-to-dataurl it.src, it.img.width, it.img.height, \image/png, 0.92, param-option
           .then -> smiltool.dataurl-to-i8a it
     )
       .then (i8as) ->

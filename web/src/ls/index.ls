@@ -42,6 +42,18 @@
           (h - img.height)/2,
           img.width, img.height
         )
+
+        if opt and opt.transparent =>
+          r = (opt.transparent .>>. 16)
+          g = (opt.transparent .>>. 8) % 256
+          b = (opt.transparent  % 256)
+          # make image transparent according to the transparency color
+          img-data = ctx.getImageData(0,0,w,h)
+          d = img-data.data
+          for i from 0 til d.length by 4 =>
+            if d[i] == r and d[i + 1] == g and d[i + 2] == b => d[i + 3] = 0
+          ctx.putImageData img-data,0, 0
+
         res {data: canvas.toDataURL(opt.type, opt.quality), type: opt.type, format: \datauri}
       catch e
         rej e
