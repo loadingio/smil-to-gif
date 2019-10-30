@@ -388,6 +388,9 @@
         return
       if param-option.step => param-option.step t
 
+      # anti-jagging code goes here, if necessary.
+      # - check anti-jagging-code.ls for more detail
+
       smil-to-svg node, t, smil2svgopt-local
         .then (ret) ->
           img = new Image!
