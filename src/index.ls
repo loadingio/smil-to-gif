@@ -121,13 +121,14 @@
     if option.css-animation or option.with-css =>
       is-svg = node.nodeName.toLowerCase! == \svg
       list = [node.style[i] for i from 0 til node.style.length] ++ <[transform opacity]>
+      stylehash = {}
       for k in list =>
         # if safari, transform-origin are broken into x, y, z.
         # but there is only "transform-origin" in computedStyle.
         # thus, we don't use computedStyle here, instead use node.style directly.
         v = style[k] or node.style[k]
         # we don't need position for svg node which cause problems
-        if is-svg and (k in <[left right top bottom position]>) => continue
+        if (is-svg and (k in <[left right top bottom position]>)) or !(v?) or v == '' => continue
 
         if ( k.indexOf(\webkit) == 0 or
           k == \cssText or
@@ -135,6 +136,8 @@
           dummy-style[k] == v or
           (option.no-animation and k.indexOf(\animation) == 0)
         ) => continue
+        if stylehash[k] => continue
+        stylehash[k] = v
         styles.push [k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase!, v]
 
     if node.nodeName == \svg =>
@@ -176,7 +179,7 @@
     ret = [
       "<#{node.nodeName}"
       """ #{attrs.map(->"#{it.0}=\"#{it.1}\"").join(" ")}""" if attrs.length
-      """ style="#{styles.map(->"#{it.0}:#{it.1}").join(";")}" """ if styles.length
+      """ style="#{styles.filter(->it.1?).map(->"#{it.0}:#{it.1}").join(";")}" """ if styles.length
       ">"
       subtags.join("\n").trim!
       "</#{node.nodeName}>"

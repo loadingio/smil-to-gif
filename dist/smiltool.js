@@ -189,7 +189,7 @@ var slice$ = [].slice;
     return dummy.defStyle;
   };
   traverse = function(node, delay, option){
-    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, list, i, i$, len$, k, v, to$, child, dur, begin, path, length, ptr, name, value, ret;
+    var ref$, attrs, styles, subtags, animatedProperties, style, dummyStyle, isSvg, list, i, stylehash, i$, len$, k, v, to$, child, dur, begin, path, length, ptr, name, value, ret;
     delay == null && (delay = 1);
     option == null && (option = {});
     if (node.nodeName[0] === '#') {
@@ -208,15 +208,20 @@ var slice$ = [].slice;
         }
         return results$;
       }()).concat(['transform', 'opacity']);
+      stylehash = {};
       for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
         k = list[i$];
         v = style[k] || node.style[k];
-        if (isSvg && (k === 'left' || k === 'right' || k === 'top' || k === 'bottom' || k === 'position')) {
+        if ((isSvg && (k === 'left' || k === 'right' || k === 'top' || k === 'bottom' || k === 'position')) || !(v != null) || v === '') {
           continue;
         }
         if (k.indexOf('webkit') === 0 || k === 'cssText' || !isNaN(k) || dummyStyle[k] === v || (option.noAnimation && k.indexOf('animation') === 0)) {
           continue;
         }
+        if (stylehash[k]) {
+          continue;
+        }
+        stylehash[k] = v;
         styles.push([k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(), v]);
       }
     }
@@ -297,7 +302,9 @@ var slice$ = [].slice;
     ret = [
       "<" + node.nodeName, attrs.length ? " " + attrs.map(function(it){
         return it[0] + "=\"" + it[1] + "\"";
-      }).join(" ") : void 8, styles.length ? " style=\"" + styles.map(function(it){
+      }).join(" ") : void 8, styles.length ? " style=\"" + styles.filter(function(it){
+        return it[1] != null;
+      }).map(function(it){
         return it[0] + ":" + it[1];
       }).join(";") + "\" " : void 8, ">", subtags.join("\n").trim(), "</" + node.nodeName + ">"
     ].filter(function(it){
