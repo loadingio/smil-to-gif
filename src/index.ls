@@ -158,7 +158,13 @@
       else if child.nodeName.indexOf(\animate) == 0 =>
         name = child.getAttribute \attributeName
         value = node[name] or style.getPropertyValue(name)
-        if name == \d => value = (node.animatedPathSegList or node.getAttribute(\d))
+        if name == \d =>
+          value = node.animatedPathSegList
+          if !value =>
+            style = getComputedStyle(node)
+            ret = /path\("([^"]+)"\)/.exec(style.d)
+            if ret => value = ret.1
+          if !value => value = node.getAttribute(\d)
         animatedProperties[name] = anim-to-string(value)
       else subtags.push traverse(child, delay, option)
     for v in node.attributes =>
