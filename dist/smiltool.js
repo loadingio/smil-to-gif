@@ -574,6 +574,7 @@ var slice$ = [].slice;
           var img;
           img = new Image();
           img.src = URL.createObjectURL(blob);
+          document.body.removeChild(container);
           return res({
             gif: img,
             frames: data.imgs,
@@ -598,7 +599,6 @@ var slice$ = [].slice;
             item = ref$[i$];
             gif.addFrame(item.img, item.option);
           }
-          document.body.removeChild(container);
           gif.on('progress', function(v){
             if (option.progress) {
               return option.progress(100 * (v * 0.5 + 0.5));

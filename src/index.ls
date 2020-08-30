@@ -349,6 +349,7 @@
       gif.on \finished, (blob) ->
         img = new Image!
         img.src = URL.createObjectURL blob
+        document.body.removeChild container
         res {gif: img, frames: data.imgs, blob: blob}
 
       # this seems to be not necessary ( adding imgs to dom )
@@ -361,7 +362,6 @@
       for item in data.imgs => container.appendChild item.img
       setTimeout (->
         for item in data.imgs => gif.addFrame item.img, item.option
-        document.body.removeChild container
         gif.on \progress, (v) -> if option.progress => option.progress 100 * ( v * 0.5 + 0.5 )
         gif.render!
       ), 0
