@@ -350,9 +350,21 @@
         img = new Image!
         img.src = URL.createObjectURL blob
         res {gif: img, frames: data.imgs, blob: blob}
-      for item in data.imgs => gif.addFrame item.img, item.option
-      gif.on \progress, (v) -> if option.progress => option.progress 100 * ( v * 0.5 + 0.5 )
-      gif.render!
+
+      # this seems to be not necessary ( adding imgs to dom )
+      # but Safari gives correct result in icon generation only if we do this
+      # otherwise a black border shows around result.
+      # TODO check the root cause for Safari issue by removing this workaround.
+      container = document.createElement \div
+      container.style <<< {height: 0, overflow: \hidden, position: \absolute, top: 0, zIndex: -1}
+      document.body.appendChild container
+      for item in data.imgs => container.appendChild item.img
+      setTimeout (->
+        for item in data.imgs => gif.addFrame item.img, item.option
+        document.body.removeChild container
+        gif.on \progress, (v) -> if option.progress => option.progress 100 * ( v * 0.5 + 0.5 )
+        gif.render!
+      ), 0
 
     smiltool.smil-to-gif = (node, param-option={}, param-gif-option={}, smil2svgopt={}) ->
       smiltool.smil-to-imgs node, param-option, smil2svgopt

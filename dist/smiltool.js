@@ -556,7 +556,7 @@ var slice$ = [].slice;
   if (typeof GIF != 'undefined' && GIF !== null) {
     smiltool.imgsToGif = function(data, paramOption, paramGifOption){
       return new Promise(function(res, rej){
-        var option, gifOption, ref$, gif, i$, len$, item;
+        var option, gifOption, ref$, gif, container, i$, len$, item;
         option = import$({
           slow: 0,
           width: 100,
@@ -580,16 +580,32 @@ var slice$ = [].slice;
             blob: blob
           });
         });
+        container = document.createElement('div');
+        ref$ = container.style;
+        ref$.height = 0;
+        ref$.overflow = 'hidden';
+        ref$.position = 'absolute';
+        ref$.top = 0;
+        ref$.zIndex = -1;
+        document.body.appendChild(container);
         for (i$ = 0, len$ = (ref$ = data.imgs).length; i$ < len$; ++i$) {
           item = ref$[i$];
-          gif.addFrame(item.img, item.option);
+          container.appendChild(item.img);
         }
-        gif.on('progress', function(v){
-          if (option.progress) {
-            return option.progress(100 * (v * 0.5 + 0.5));
+        return setTimeout(function(){
+          var i$, ref$, len$, item;
+          for (i$ = 0, len$ = (ref$ = data.imgs).length; i$ < len$; ++i$) {
+            item = ref$[i$];
+            gif.addFrame(item.img, item.option);
           }
-        });
-        return gif.render();
+          document.body.removeChild(container);
+          gif.on('progress', function(v){
+            if (option.progress) {
+              return option.progress(100 * (v * 0.5 + 0.5));
+            }
+          });
+          return gif.render();
+        }, 0);
       });
     };
     smiltool.smilToGif = function(node, paramOption, paramGifOption, smil2svgopt){
