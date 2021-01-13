@@ -467,12 +467,12 @@ var slice$ = [].slice;
         a32[i] = bin.charCodeAt(j++) | bin.charCodeAt(j++) << 8 | bin.charCodeAt(j++) << 16 | bin.charCodeAt(j++) << 24;
       }
       tailLen = len & 3;
-      for (i$ = tailLen; i$ < 0; ++i$) {
+      for (i$ = tailLen; i$ > 0; --i$) {
         i = i$;
         a8[j] = bin.charCodeAt(j);
         j++;
       }
-      return res(smiltool.pngIendFix(a8));
+      return res(a8);
     });
   };
   smiltool.i8aToBlob = i8aToBlob = function(i8a, type){

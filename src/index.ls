@@ -282,10 +282,14 @@
         (bin.charCodeAt j++) .|. (bin.charCodeAt(j++) .<<. 8) .|.  (bin.charCodeAt(j++) .<<. 16 ) .|.  (bin.charCodeAt(j++) .<<. 24 )
       )
     tail-len = len .&. 3
-    for i from tail-len til 0
+    for i from tail-len til 0 by -1
       a8[j] = bin.charCodeAt j
       j++
-    res smiltool.png-iend-fix(a8)
+
+    # - png-iend-fix might actually be caused by the bug in the above loop which omitted the 'by -1'.
+    #   we will do some additional test to check if this is really fixed, then remove it.
+    # res smiltool.png-iend-fix(a8)
+    return res a8
 
   smiltool.i8a-to-blob = i8a-to-blob = (i8a, type = \image/png) -> new Promise (res, rej) ->
     res new Blob([i8a], {type})
