@@ -371,6 +371,7 @@
           # which leads to inaccurate amount of total elapsed time.
           # thus we use delta between rounded time, and fallback to delay if time isn't present.ed
           delay = if item.option.nexttime? and item.option.currenttime? =>
+            # gif delay unit: 10ms
             (Math.round(100 * item.option.nexttime) - Math.round(100 * item.option.currenttime)) * 10
           else item.option.delay
           gif.addFrame item.img, ({} <<< item.option <<< {delay})
