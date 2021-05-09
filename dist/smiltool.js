@@ -601,6 +601,10 @@ var slice$ = [].slice;
             delay = item.option.nexttime != null && item.option.currenttime != null
               ? (Math.round(100 * item.option.nexttime) - Math.round(100 * item.option.currenttime)) * 10
               : item.option.delay;
+            console.log("frame " + i + ", delay: " + delay + "ms ( delta: " + (item.option.nexttime - item.option.currenttime));
+            if (delay < 20 && i === data.imgs.length - 1) {
+              continue;
+            }
             gif.addFrame(item.img, (ref$ = import$({}, item.option), ref$.delay = delay, ref$));
           }
           gif.on('progress', function(v){

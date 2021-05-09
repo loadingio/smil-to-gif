@@ -374,6 +374,8 @@
             # gif delay unit: 10ms
             (Math.round(100 * item.option.nexttime) - Math.round(100 * item.option.currenttime)) * 10
           else item.option.delay
+          # sometimes delay will < 20 at the end which makes it lag. just discard it
+          if delay < 20 and i == data.imgs.length - 1 => continue
           gif.addFrame item.img, ({} <<< item.option <<< {delay})
         gif.on \progress, (v) -> if option.progress => option.progress 100 * ( v * 0.5 + 0.5 )
         gif.render!
