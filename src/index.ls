@@ -365,7 +365,15 @@
       document.body.appendChild container
       for item in data.imgs => container.appendChild item.img
       setTimeout (->
-        for item in data.imgs => gif.addFrame item.img, item.option
+        for i from 0 til data.imgs.length =>
+          item = data.imgs[i]
+          # if we use a fixed delay, there will be accumulated rounding error
+          # which leads to inaccurate amount of total elapsed time.
+          # thus we use delta between rounded time, and fallback to delay if time isn't present.ed
+          delay = if item.option.nexttime? and item.option.currenttime? =>
+            (Math.round(100 * item.option.nexttime) - Math.round(100 * item.option.currenttime)) * 10
+          else item.option.delay
+          gif.addFrame item.img, ({} <<< item.option <<< {delay})
         gif.on \progress, (v) -> if option.progress => option.progress 100 * ( v * 0.5 + 0.5 )
         gif.render!
       ), 0
@@ -380,7 +388,7 @@
     promises = data.imgs.map (d,i) ->
       url-to-dataurl data.imgs[i].src, option.width, option.height, \image/png, 0.92, param-option
         .then -> dataurl-to-blob it
-        .then (blob) -> zip.file "frame-#i.png", blob
+        .then (blob) -> zip.file "frame-#{i + 1}.png", blob
     Promise.all promises
       .then -> zip.generate-async type: \blob
       .then -> return {blob: it, frames: data.imgs}
@@ -393,8 +401,6 @@
   smiltool.smil-to-imgs = (node, param-option={}, smil2svgopt={}) -> new Promise (res, rej) ->
     imgs = []
     option = {slow: 0, width: 100, height: 100, frames: 30, duration: 1, progress: (->)}  <<< param-option
-    #if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
-    #if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
 
     # kee animation paused in the generation loop so Safari works well without timing issue.
     smil2svgopt-local = {} <<< smil2svgopt <<< {keep-paused: true}
@@ -402,10 +408,10 @@
     handler = {imgs: [], option}
     render = -> res handler
     skip = 0 # skip the very first frame and repeat it again. can solve some glitch in browsers like Safari
-    _ = (t) ->
+    _ = (t, ot, idx) ->
       p = 100 * t / option.duration <? 100
       option.progress p * 0.5
-      if t > option.duration =>
+      if t >= option.duration =>
         # call smil-to-svg one more time without keep-paused to resume animation
         smil-to-svg node, t, smil2svgopt
           .then -> return render! #return gif.render!
@@ -424,15 +430,22 @@
             ..height = "#{option.height}px"
           if !skip =>
             skip := 1
-            setTimeout (-> _ t ), option.slow
+            setTimeout (-> _ t, t, 0), option.slow
           else
             img.src = "data:image/svg+xml;,#{encodeURIComponent ret}"
-            delay = Math.round(option.duration * 1000 / option.frames)
-            handler.imgs.push {img, option: {delay}, src: img.src}
+            # delay from dur / frames is deprecated.
+            #   - delay = Math.round(option.duration * 1000 / option.frames)
+            # we should always infer delay from nt - t, and rounding if necessary (round(nt) - round(t))
+            # because only by this we have correct total elapsed animation time.
+            delay = 1000 * option.duration / option.frames
+
+            nt = (( idx + 1 ) * ( option.duration / option.frames )) <? option.duration
+            #nt = t + ( option.duration / option.frames ) # old method, but inaccurate. deprecated
+            handler.imgs.push {img, option: {delay, nexttime: nt, currenttime: t, lasttime: ot}, src: img.src}
             imgs.push img
-            setTimeout (-> _ t + (option.duration / option.frames)), option.slow
+            setTimeout (-> _ nt, t, idx + 1), option.slow
         .catch rej
-    setTimeout (-> _ 0), option.slow
+    setTimeout (-> _ 0, 0, 0), option.slow
 
   iBuffer = (input) ->
     if typeof(input) == \number =>
@@ -525,14 +538,17 @@
       return [idx, ihdr, iBuffer.concat(fctl, fdat)]
 
 
-  smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], delay = 0.033, repeat = 0) ->
+  smiltool.i8as-to-apng-i8a = i8as-to-apng-i8a = (i8as = [], repeat = 0) ->
     Promise.resolve!
       .then ->
         #[images, i8as] = [[], i8as.filter(->it.length)]
         #for idx from 0 til i8as =>
         #  ret = apngtool.animate-frame(new iBuffer(i8as[idx]), idx, delay)
-        images = i8as.filter(->it.length).map (d,idx) ->
-          apngtool.animate-frame(new iBuffer(d), idx, delay)
+
+        images = i8as.filter(->it.i8a.length).map (d,idx) ->
+          o = d.img.option
+          delay = (Math.round(1000 * o.nexttime) - Math.round(1000 * o.currenttime)) / 1000
+          apngtool.animate-frame(new iBuffer(d.i8a), idx, delay)
         signature = new iBuffer [137, 80, 78, 71, 13, 10, 26, 10]
         ihdr = images.0.1
         iend = new iBuffer [0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
@@ -547,18 +563,13 @@
 
   smiltool.imgs-to-apng-i8a = (data, param-option={}) ->
     Promise.all(
-      data.imgs.map ->
-        smiltool.url-to-dataurl it.src, it.img.width, it.img.height, \image/png, 0.92, param-option
+      data.imgs.map (img) ->
+        smiltool.url-to-dataurl img.src, img.img.width, img.img.height, \image/png, 0.92, param-option
           .then -> smiltool.dataurl-to-i8a it
+          .then (i8a) -> {img, i8a}
     )
       .then (i8as) ->
-        option = {frames: 30, duration: 1}  <<< param-option
-        # if we want to change frame counts, we should also adjust frames in i8as, which is kinda hard.
-        # so we temporarily disable this.
-        #if option.duration / option.frames < 0.034 => option.frames = Math.floor(option.duration / 0.034)
-        #if option.duration / option.frames > 0.1 => option.frames = Math.ceil(option.duration / 0.1)
-        delay = option.duration / option.frames
-        smiltool.i8as-to-apng-i8a i8as, delay, (param-option.repeat-count or 0)
+        smiltool.i8as-to-apng-i8a i8as, (param-option.repeat-count or 0)
 
   smiltool.imgs-to-apng-blob = (data, param-option={}) ->
     smiltool.imgs-to-apng-i8a data, param-option

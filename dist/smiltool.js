@@ -594,10 +594,14 @@ var slice$ = [].slice;
           container.appendChild(item.img);
         }
         return setTimeout(function(){
-          var i$, ref$, len$, item;
-          for (i$ = 0, len$ = (ref$ = data.imgs).length; i$ < len$; ++i$) {
-            item = ref$[i$];
-            gif.addFrame(item.img, item.option);
+          var i$, to$, i, item, delay, ref$;
+          for (i$ = 0, to$ = data.imgs.length; i$ < to$; ++i$) {
+            i = i$;
+            item = data.imgs[i];
+            delay = item.option.nexttime != null && item.option.currenttime != null
+              ? (Math.round(100 * item.option.nexttime) - Math.round(100 * item.option.currenttime)) * 10
+              : item.option.delay;
+            gif.addFrame(item.img, (ref$ = import$({}, item.option), ref$.delay = delay, ref$));
           }
           gif.on('progress', function(v){
             if (option.progress) {
@@ -629,7 +633,7 @@ var slice$ = [].slice;
       return urlToDataurl(data.imgs[i].src, option.width, option.height, 'image/png', 0.92, paramOption).then(function(it){
         return dataurlToBlob(it);
       }).then(function(blob){
-        return zip.file("frame-" + i + ".png", blob);
+        return zip.file("frame-" + (i + 1) + ".png", blob);
       });
     });
     return Promise.all(promises).then(function(){
@@ -673,11 +677,11 @@ var slice$ = [].slice;
         return res(handler);
       };
       skip = 0;
-      _ = function(t){
+      _ = function(t, ot, idx){
         var p, ref$;
         p = (ref$ = 100 * t / option.duration) < 100 ? ref$ : 100;
         option.progress(p * 0.5);
-        if (t > option.duration) {
+        if (t >= option.duration) {
           smilToSvg(node, t, smil2svgopt).then(function(){
             return render();
           })['catch'](rej);
@@ -687,7 +691,7 @@ var slice$ = [].slice;
           paramOption.step(t);
         }
         return smilToSvg(node, t, smil2svgoptLocal).then(function(ret){
-          var img, x$, delay;
+          var img, x$, delay, nt, ref$, ref1$;
           img = new Image();
           x$ = img.style;
           x$.width = option.width + "px";
@@ -695,27 +699,31 @@ var slice$ = [].slice;
           if (!skip) {
             skip = 1;
             return setTimeout(function(){
-              return _(t);
+              return _(t, t, 0);
             }, option.slow);
           } else {
             img.src = "data:image/svg+xml;," + encodeURIComponent(ret);
-            delay = Math.round(option.duration * 1000 / option.frames);
+            delay = 1000 * option.duration / option.frames;
+            nt = (ref$ = (idx + 1) * (option.duration / option.frames)) < (ref1$ = option.duration) ? ref$ : ref1$;
             handler.imgs.push({
               img: img,
               option: {
-                delay: delay
+                delay: delay,
+                nexttime: nt,
+                currenttime: t,
+                lasttime: ot
               },
               src: img.src
             });
             imgs.push(img);
             return setTimeout(function(){
-              return _(t + option.duration / option.frames);
+              return _(nt, t, idx + 1);
             }, option.slow);
           }
         })['catch'](rej);
       };
       return setTimeout(function(){
-        return _(0);
+        return _(0, 0, 0);
       }, option.slow);
     });
   };
@@ -864,16 +872,18 @@ var slice$ = [].slice;
       return [idx, ihdr, iBuffer.concat(fctl, fdat)];
     }
   };
-  smiltool.i8asToApngI8a = i8asToApngI8a = function(i8as, delay, repeat){
+  smiltool.i8asToApngI8a = i8asToApngI8a = function(i8as, repeat){
     i8as == null && (i8as = []);
-    delay == null && (delay = 0.033);
     repeat == null && (repeat = 0);
     return Promise.resolve().then(function(){
       var images, signature, ihdr, iend, actl;
       images = i8as.filter(function(it){
-        return it.length;
+        return it.i8a.length;
       }).map(function(d, idx){
-        return apngtool.animateFrame(new iBuffer(d), idx, delay);
+        var o, delay;
+        o = d.img.option;
+        delay = (Math.round(1000 * o.nexttime) - Math.round(1000 * o.currenttime)) / 1000;
+        return apngtool.animateFrame(new iBuffer(d.i8a), idx, delay);
       });
       signature = new iBuffer([137, 80, 78, 71, 13, 10, 26, 10]);
       ihdr = images[0][1];
@@ -893,18 +903,17 @@ var slice$ = [].slice;
   };
   smiltool.imgsToApngI8a = function(data, paramOption){
     paramOption == null && (paramOption = {});
-    return Promise.all(data.imgs.map(function(it){
-      return smiltool.urlToDataurl(it.src, it.img.width, it.img.height, 'image/png', 0.92, paramOption).then(function(it){
+    return Promise.all(data.imgs.map(function(img){
+      return smiltool.urlToDataurl(img.src, img.img.width, img.img.height, 'image/png', 0.92, paramOption).then(function(it){
         return smiltool.dataurlToI8a(it);
+      }).then(function(i8a){
+        return {
+          img: img,
+          i8a: i8a
+        };
       });
     })).then(function(i8as){
-      var option, delay;
-      option = import$({
-        frames: 30,
-        duration: 1
-      }, paramOption);
-      delay = option.duration / option.frames;
-      return smiltool.i8asToApngI8a(i8as, delay, paramOption.repeatCount || 0);
+      return smiltool.i8asToApngI8a(i8as, paramOption.repeatCount || 0);
     });
   };
   smiltool.imgsToApngBlob = function(data, paramOption){
